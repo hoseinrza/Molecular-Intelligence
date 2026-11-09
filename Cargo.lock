@@ -17,6 +17,10 @@ version = "0.1.0"
 [[package]]
 name = "mi-data"
 version = "0.1.0"
+dependencies = [
+ "mi-chemistry",
+ "mi-graph",
+]
 
 [[package]]
 name = "mi-evaluation"

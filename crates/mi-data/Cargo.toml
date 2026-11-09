@@ -5,3 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "Dataset loading and data processing for Molecular Intelligence."
+
+[dependencies]
+mi-chemistry = { path = "../mi-chemistry" }
+mi-graph = { path = "../mi-graph" }
