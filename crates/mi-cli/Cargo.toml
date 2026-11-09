@@ -1,9 +1,10 @@
-﻿[package]
+[package]
 name = "mi-cli"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+description = "Command-line interface for Molecular Intelligence."
 
 [[bin]]
 name = "mi-cli"

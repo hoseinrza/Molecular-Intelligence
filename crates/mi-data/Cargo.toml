@@ -1,6 +1,7 @@
-﻿[package]
+[package]
 name = "mi-data"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+description = "Dataset loading and data processing for Molecular Intelligence."

@@ -1,1 +1,24 @@
-﻿/target/
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Datasets and checkpoints (large local research artifacts)
+/datasets/*
+!/datasets/.gitkeep
+/checkpoints/*
+!/checkpoints/.gitkeep
+
+# Model and dataset binary artifacts anywhere in the tree
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.h5
+*.hdf5
+*.sdf
+*.mol2
+*.parquet
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

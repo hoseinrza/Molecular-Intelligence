@@ -1,6 +1,7 @@
-﻿[package]
+[package]
 name = "mi-chemistry"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+description = "Molecular and atomic representations for Molecular Intelligence."
