@@ -6,15 +6,17 @@ representations to trained models and scientific evaluation, with an initial
 research focus on molecular property prediction — HOMO, LUMO, and the
 HOMO–LUMO gap.
 
-## Current Status: Phase 1 — Chemistry Core
+## Current Status: Phase 2 — Molecular Graph
 
-The workspace foundation (Phase 0) is complete, and the chemistry core data
-model is implemented in `mi-chemistry`: chemical elements (all 118, with
-reference data and documented provenance), atoms, bonds, molecules, and
-structural validation. No graph algorithms, file parsing, datasets, tensors,
-or machine learning yet. See
-[`docs/architecture/overview.md`](docs/architecture/overview.md) and
-[`docs/scientific-methodology/chemical-data-model.md`](docs/scientific-methodology/chemical-data-model.md).
+The workspace foundation (Phase 0) and the chemistry core data model
+(Phase 1, `mi-chemistry`: elements, atoms, bonds, molecules, structural
+validation) are complete. `mi-graph` now converts validated molecules into
+feature-rich molecular graphs: nodes and edges with versioned feature
+schemas, adjacency lists, and a directed message-passing view. No datasets,
+tensors, models, or training yet. See
+[`docs/architecture/overview.md`](docs/architecture/overview.md),
+[`docs/scientific-methodology/chemical-data-model.md`](docs/scientific-methodology/chemical-data-model.md),
+and [`docs/architecture/molecular-graph.md`](docs/architecture/molecular-graph.md).
 
 ## Requirements
 
@@ -44,7 +46,7 @@ molecular-intelligence/
 | ---------------- | ---- | ----------------------- |
 | `mi-core`        | lib  | Shared types, errors, and foundational abstractions. |
 | `mi-chemistry`   | lib  | Molecular and atomic representations. **Implemented (Phase 1):** elements, atoms, bonds, molecules, structural validation. |
-| `mi-graph`       | lib  | Molecular graph representations. |
+| `mi-graph`       | lib  | Molecular graph representations. **Implemented (Phase 2):** molecular graphs, feature schemas, adjacency, molecule-to-graph conversion. |
 | `mi-data`        | lib  | Dataset loading and data processing. |
 | `mi-tensor`      | lib  | Numerical and tensor abstractions. |
 | `mi-models`      | lib  | Machine learning model definitions. |
@@ -54,8 +56,8 @@ molecular-intelligence/
 | `mi-python`      | lib  | Future Python interoperability layer. |
 | `mi-cli`         | bin  | Command-line interface. |
 
-These responsibilities are declarations of intent; `mi-chemistry` implements
-its data model as of Phase 1, and the rest remains future work.
+These responsibilities are declarations of intent; `mi-chemistry` (Phase 1)
+and `mi-graph` (Phase 2) are implemented, and the rest remains future work.
 
 ## Architecture
 

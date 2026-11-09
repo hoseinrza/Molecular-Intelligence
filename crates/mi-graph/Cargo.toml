@@ -5,3 +5,6 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "Molecular graph representations for Molecular Intelligence."
+
+[dependencies]
+mi-chemistry = { path = "../mi-chemistry" }

@@ -25,6 +25,9 @@ version = "0.1.0"
 [[package]]
 name = "mi-graph"
 version = "0.1.0"
+dependencies = [
+ "mi-chemistry",
+]
 
 [[package]]
 name = "mi-inference"
