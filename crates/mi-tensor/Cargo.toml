@@ -5,3 +5,6 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "Numerical and tensor abstractions for Molecular Intelligence."
+
+[dependencies]
+burn.workspace = true

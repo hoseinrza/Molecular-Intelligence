@@ -19,3 +19,6 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
+
+[workspace.dependencies]
+burn = { version = "=0.22.1", default-features = false, features = ["flex", "autodiff"] }
