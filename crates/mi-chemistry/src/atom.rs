@@ -2,8 +2,10 @@
 
 use crate::element::ChemicalElement;
 use crate::error::ChemistryError;
+use crate::position::Position;
 
-/// A single atom: a chemical element plus per-atom chemical state.
+/// A single atom: a chemical element plus per-atom chemical state and an
+/// optional Cartesian position.
 ///
 /// An atom bundles a validated [`ChemicalElement`] (identity) with:
 ///
@@ -16,6 +18,9 @@ use crate::error::ChemistryError;
 ///   carbon-13). It is distinct from the element's averaged
 ///   [`atomic mass`](ChemicalElement::atomic_mass) and from the exact
 ///   isotopic mass in u (which is a future extension).
+/// - **Position** — optional; a validated Cartesian position in Ångström
+///   (see [`Position`]). Coordinate-based file formats (XYZ, molfiles)
+///   always carry one; purely topological uses may omit it.
 /// - **Label** — optional free-form bookkeeping text (e.g. `"C_alpha"`);
 ///   never interpreted chemically.
 ///
@@ -23,30 +28,33 @@ use crate::error::ChemistryError;
 /// configure one:
 ///
 /// ```
-/// use mi_chemistry::{Atom, ChemicalElement};
+/// use mi_chemistry::{Atom, ChemicalElement, Position};
 ///
 /// // A bare carbon atom.
 /// let carbon = Atom::new(ChemicalElement::from_symbol("C")?);
 ///
-/// // Carbon-13 carrying a negative formal charge.
+/// // Carbon-13 carrying a negative formal charge, placed in space.
 /// let carbanion_c13 = Atom::new(ChemicalElement::from_symbol("C")?)
 ///     .with_formal_charge(-1)
-///     .with_isotope(13)?;
+///     .with_isotope(13)?
+///     .with_position(Position::new(0.0, 0.0, 1.42)?);
 /// assert_eq!(carbanion_c13.formal_charge(), -1);
 /// assert_eq!(carbanion_c13.isotope_mass_number(), Some(13));
+/// assert_eq!(carbanion_c13.position().map(Position::z), Some(1.42));
 /// # Ok::<(), mi_chemistry::ChemistryError>(())
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Atom {
     element: ChemicalElement,
     formal_charge: i8,
     isotope_mass_number: Option<u16>,
+    position: Option<Position>,
     label: Option<String>,
 }
 
 impl Atom {
     /// Creates an atom of `element` with formal charge `0`, no isotope
-    /// specification, and no label.
+    /// specification, no position, and no label.
     ///
     /// The element has already been validated during its own construction,
     /// so this constructor is infallible.
@@ -55,6 +63,7 @@ impl Atom {
             element,
             formal_charge: 0,
             isotope_mass_number: None,
+            position: None,
             label: None,
         }
     }
@@ -101,6 +110,15 @@ impl Atom {
         self
     }
 
+    /// Sets the Cartesian position and returns the atom.
+    ///
+    /// [`Position`] has already been validated during its own construction
+    /// (finite components), so this builder is infallible.
+    pub fn with_position(mut self, position: Position) -> Self {
+        self.position = Some(position);
+        self
+    }
+
     /// Returns the chemical element of this atom.
     pub fn element(&self) -> ChemicalElement {
         self.element
@@ -134,6 +152,11 @@ impl Atom {
     /// Returns the isotope mass number, if one was specified.
     pub fn isotope_mass_number(&self) -> Option<u16> {
         self.isotope_mass_number
+    }
+
+    /// Returns the Cartesian position in Ångström, if one was set.
+    pub fn position(&self) -> Option<Position> {
+        self.position
     }
 
     /// Returns the label, if one was set.
@@ -214,6 +237,21 @@ mod tests {
                 minimum_valid: 1,
             })
         );
+    }
+
+    #[test]
+    fn position_is_stored_and_optional() {
+        let bare = Atom::new(carbon());
+        assert_eq!(bare.position(), None);
+        let placed = bare
+            .clone()
+            .with_position(Position::new(0.5, -1.25, 3.0).unwrap());
+        assert_eq!(
+            placed.position(),
+            Some(Position::new(0.5, -1.25, 3.0).unwrap())
+        );
+        // Atoms differing only in position compare unequal.
+        assert_ne!(bare, placed);
     }
 
     #[test]

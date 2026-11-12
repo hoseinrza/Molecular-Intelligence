@@ -7,7 +7,7 @@
 use std::fmt;
 
 /// Errors produced when constructing or validating chemical data.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ChemistryError {
     /// An atomic number outside the range `1..=118` was requested.
     InvalidAtomicNumber {
@@ -62,6 +62,16 @@ pub enum ChemistryError {
         /// The smallest physically possible mass number (the atomic number).
         minimum_valid: u16,
     },
+    /// A position component is not finite (NaN or infinite).
+    ///
+    /// Only finite Cartesian coordinates can enter the data model; this
+    /// keeps every stored position comparable and serializable.
+    InvalidPosition {
+        /// The rejected component: `"x"`, `"y"`, or `"z"`.
+        component: &'static str,
+        /// The rejected component value, verbatim.
+        value: f64,
+    },
     /// The molecular structure violates a structural invariant.
     InvalidMolecularStructure {
         /// Human-readable description of the violated invariant.
@@ -114,6 +124,12 @@ impl fmt::Display for ChemistryError {
                     f,
                     "invalid isotope mass number {value} for element {element_symbol}: \
                      the mass number must be at least the atomic number ({minimum_valid})"
+                )
+            }
+            Self::InvalidPosition { component, value } => {
+                write!(
+                    f,
+                    "invalid position: {component} coordinate value {value} is not finite"
                 )
             }
             Self::InvalidMolecularStructure { reason } => {

@@ -15,7 +15,7 @@
 //!
 //! - [`ChemicalElement`] — a validated handle for one of the 118 elements.
 //! - [`Atom`] — an element with formal charge, optional isotope mass number,
-//!   and optional label.
+//!   optional Cartesian position, and optional label.
 //! - [`Bond`] / [`BondType`] — an undirected bond between two atom indices.
 //! - [`Molecule`] — an indexed, append-only collection of atoms and bonds.
 //! - [`ChemistryError`] — all fallible operations report through this type.
@@ -54,6 +54,7 @@ pub mod bond;
 pub mod element;
 pub mod error;
 pub mod molecule;
+pub mod position;
 
 mod validation;
 
@@ -62,3 +63,4 @@ pub use bond::{Bond, BondType};
 pub use element::ChemicalElement;
 pub use error::ChemistryError;
 pub use molecule::Molecule;
+pub use position::Position;

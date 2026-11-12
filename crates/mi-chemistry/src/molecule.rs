@@ -48,7 +48,7 @@ use crate::validation;
 /// water.validate()?;
 /// # Ok::<(), mi_chemistry::ChemistryError>(())
 /// ```
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Molecule {
     name: Option<String>,
     identifier: Option<String>,

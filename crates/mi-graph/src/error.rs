@@ -8,7 +8,7 @@ use std::fmt;
 
 /// Errors produced when building or validating a
 /// [`MolecularGraph`](crate::MolecularGraph).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GraphError {
     /// The source molecule failed its structural validation.
     ///
