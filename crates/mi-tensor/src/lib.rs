@@ -18,7 +18,7 @@ mod validation;
 pub mod operations;
 
 pub use backend::Cpu;
-pub use burn::tensor::Gradients;
+pub use burn::tensor::{Device, Gradients};
 pub use dtype::DType;
 pub use error::{TensorError, TensorResult};
 pub use loss::{huber_loss, mae, mse};

@@ -6,20 +6,20 @@ representations to trained models and scientific evaluation, with an initial
 research focus on molecular property prediction — HOMO, LUMO, and the
 HOMO–LUMO gap.
 
-## Current Status: Molecular Dataset I/O (`mi-io`)
+## Current Status: Molecular Tensor (`mi-featurization`)
 
 The workspace foundation, chemistry core (Phase 1, `mi-chemistry`),
 molecular graphs (Phase 2, `mi-graph`), the scientific dataset layer
 (Phase 3, `mi-data`), and the tensor backend (`mi-tensor`) are complete.
-`mi-io` now provides the ingestion boundary for real molecular data: XYZ
-parsing/writing (elements plus Cartesian positions in Ångström), SDF/MDL
-molfile V2000 parsing/writing (positions, bonds with orders, formal
-charges, per-record data fields, multi-record files), dataset import that
-attaches electronic properties with explicit energy-unit conversion
-(eV/Hartree) and scientific provenance metadata (source, method,
-functional, basis set, source id, version), and a strict no-silent-loss
-error policy with line-numbered diagnostics. Round-trip behavior is
-integration-tested for both formats. No models or training loops yet. See
+`mi-featurization` now provides the molecular↔numerical junction:
+molecular graphs become `mi-tensor` tensors assembled from `mi-graph`'s
+versioned feature schemas (node matrix, directed edge index, edge
+features, with schema versions as provenance), Cartesian positions become
+Euclidean distance features in Ångström, and dataset entries become
+HOMO/LUMO/gap regression targets as an explicit values/mask tensor pair
+in electronvolts. Absence is always explicit (Option edges, presence
+masks) — no invented features, no sentinels. No models or training loops
+yet. See
 [`docs/architecture/overview.md`](docs/architecture/overview.md),
 [`docs/architecture/dataset-layer.md`](docs/architecture/dataset-layer.md),
 [`docs/architecture/dataset-io.md`](docs/architecture/dataset-io.md),
@@ -58,6 +58,7 @@ molecular-intelligence/
 | `mi-data`        | lib  | Dataset loading and data processing. **Implemented (Phase 3):** validated in-memory molecular datasets with HOMO/LUMO/gap properties and statistics. |
 | `mi-io`          | lib  | Molecular file format I/O. **Implemented (current phase):** XYZ parser/writer; SDF (MDL V2000) parser/writer with bonds, formal charges, data fields, and multi-record files; dataset import with property attachment and energy-unit conversion; scientific provenance metadata; line-numbered typed errors; round-trip-tested formats. |
 | `mi-tensor`      | lib  | Numerical and tensor abstractions. **Implemented:** Burn Flex-backed CPU tensors with ingress validation; graph-preserving arithmetic, matrix, activation, and tensor-reduction operations; differentiable MSE/MAE/Huber losses; `require_grad`/`backward`/`grad` autodiff API; separated host-side evaluation utilities. |
+| `mi-featurization` | lib | Molecular structure → ML tensors. **Implemented (current phase):** graph tensors from versioned feature schemas, Euclidean distance geometry from Cartesian positions, HOMO/LUMO/gap targets as values/mask tensors in eV; schema-version provenance; explicit-absence conventions. |
 | `mi-models`      | lib  | Machine learning model definitions. |
 | `mi-training`    | lib  | Training infrastructure. |
 | `mi-evaluation`  | lib  | Scientific evaluation and metrics. |
@@ -66,8 +67,8 @@ molecular-intelligence/
 | `mi-cli`         | bin  | Command-line interface. |
 
 These responsibilities are declarations of intent; `mi-chemistry`,
-`mi-graph`, `mi-data`, `mi-tensor`, and `mi-io` are implemented, and the
-rest remains future work.
+`mi-graph`, `mi-data`, `mi-tensor`, `mi-io`, and `mi-featurization` are
+implemented, and the rest remains future work.
 
 ## Architecture
 

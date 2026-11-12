@@ -56,6 +56,7 @@ genuinely needed by more than one crate.
 | `mi-graph`       | lib  | Molecular graph representations built on top of chemical entities. |
 | `mi-data`        | lib  | Dataset loading, dataset management, and data processing. |
 | `mi-io`          | lib  | Molecular file format I/O (XYZ, SDF) and dataset import with scientific provenance metadata. |
+| `mi-featurization` | lib | Featurization of molecular structures into ML tensors (graph tensors, geometry, targets) — the molecular↔numerical junction. |
 | `mi-tensor`      | lib  | Numerical and tensor abstractions decoupling models from any specific backend. |
 | `mi-models`      | lib  | Machine learning model definitions operating on molecular representations. |
 | `mi-training`    | lib  | Training infrastructure: loops, optimization, checkpointing orchestration. |
@@ -85,6 +86,10 @@ the following layering, and no cycles are allowed:
         │  mi-data    │ │  mi-graph   │ │  mi-tensor  │
         │  mi-chemistry│ │  mi-io     │ │             │
         └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+               └───────────────┼───────────────┘
+                        ┌──────▼──────────────┐
+                        │  mi-featurization   │
+                        └──────┬──────────────┘
                │               │               │
         ┌──────▼───────────────▼───────────────▼───────┐
         │                  mi-core                     │
@@ -103,6 +108,11 @@ Expected (future) internal dependencies:
 - `mi-io` — depends on `mi-chemistry` (molecules to build) and `mi-data`
   (datasets to populate); it converts file formats into these types at the
   ingestion boundary and never feeds the ML lifecycle directly.
+- `mi-featurization` — depends on `mi-graph` (versioned feature schemas),
+  `mi-data` (properties as targets), and `mi-tensor` (numerical
+  substrate); it is the sanctioned junction where molecular
+  representations meet numerical computation, so `mi-models` can consume a
+  stable featurization API without importing chemistry itself.
 - `mi-models` — depends on `mi-graph` (model inputs) and `mi-tensor`
   (computation substrate), plus `mi-core`.
 - `mi-training`, `mi-inference` — depend on `mi-models`, `mi-data`,

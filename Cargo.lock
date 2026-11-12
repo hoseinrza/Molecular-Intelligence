@@ -1479,6 +1479,16 @@ name = "mi-evaluation"
 version = "0.1.0"
 
 [[package]]
+name = "mi-featurization"
+version = "0.1.0"
+dependencies = [
+ "mi-chemistry",
+ "mi-data",
+ "mi-graph",
+ "mi-tensor",
+]
+
+[[package]]
 name = "mi-graph"
 version = "0.1.0"
 dependencies = [

@@ -1,0 +1,13 @@
+[package]
+name = "mi-featurization"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Featurization of molecular structures into ML tensors for Molecular Intelligence."
+
+[dependencies]
+mi-chemistry = { path = "../mi-chemistry" }
+mi-graph = { path = "../mi-graph" }
+mi-data = { path = "../mi-data" }
+mi-tensor = { path = "../mi-tensor" }
