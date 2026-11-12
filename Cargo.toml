@@ -5,6 +5,7 @@ members = [
     "crates/mi-chemistry",
     "crates/mi-graph",
     "crates/mi-data",
+    "crates/mi-io",
     "crates/mi-tensor",
     "crates/mi-models",
     "crates/mi-training",

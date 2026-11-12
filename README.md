@@ -6,24 +6,23 @@ representations to trained models and scientific evaluation, with an initial
 research focus on molecular property prediction — HOMO, LUMO, and the
 HOMO–LUMO gap.
 
-## Current Status: Phase 4 — Tensor Primitives
+## Current Status: Molecular Dataset I/O (`mi-io`)
 
-The workspace foundation (Phase 0), chemistry core (Phase 1, `mi-chemistry`),
-molecular graphs (Phase 2, `mi-graph`), and the scientific dataset layer
-(Phase 3, `mi-data`) are complete. `mi-tensor` now provides CPU-first tensor
-primitives backed by Burn's Flex backend: a `Tensor<D>` ingress wrapper for
-finite `f32` data with compile-time rank and validated runtime shape;
-graph-preserving arithmetic, matrix, activation, and tensor-valued reduction
-operations; differentiable MSE/MAE/Huber losses returning Burn tensors; and
-a `require_grad`/`backward`/`grad` autodiff API on tensors created with
-`Cpu::training()`. Host-side scalar evaluation utilities (`to_vec`, `item`,
-scalar reductions, `dot`) are kept separate from differentiable paths.
-Gradient correctness is covered by tests comparing autodiff against analytic
-forms and central finite differences. No file loaders, models, or training
-loops yet. See
+The workspace foundation, chemistry core (Phase 1, `mi-chemistry`),
+molecular graphs (Phase 2, `mi-graph`), the scientific dataset layer
+(Phase 3, `mi-data`), and the tensor backend (`mi-tensor`) are complete.
+`mi-io` now provides the ingestion boundary for real molecular data: XYZ
+parsing/writing (elements plus Cartesian positions in Ångström), SDF/MDL
+molfile V2000 parsing/writing (positions, bonds with orders, formal
+charges, per-record data fields, multi-record files), dataset import that
+attaches electronic properties with explicit energy-unit conversion
+(eV/Hartree) and scientific provenance metadata (source, method,
+functional, basis set, source id, version), and a strict no-silent-loss
+error policy with line-numbered diagnostics. Round-trip behavior is
+integration-tested for both formats. No models or training loops yet. See
 [`docs/architecture/overview.md`](docs/architecture/overview.md),
-[`docs/architecture/molecular-graph.md`](docs/architecture/molecular-graph.md),
 [`docs/architecture/dataset-layer.md`](docs/architecture/dataset-layer.md),
+[`docs/architecture/dataset-io.md`](docs/architecture/dataset-io.md),
 and [`docs/architecture/tensor-backend.md`](docs/architecture/tensor-backend.md).
 
 ## Requirements
@@ -57,7 +56,8 @@ molecular-intelligence/
 | `mi-chemistry`   | lib  | Molecular and atomic representations. **Implemented (Phase 1):** elements, atoms, bonds, molecules, structural validation. |
 | `mi-graph`       | lib  | Molecular graph representations. **Implemented (Phase 2):** molecular graphs, feature schemas, adjacency, molecule-to-graph conversion. |
 | `mi-data`        | lib  | Dataset loading and data processing. **Implemented (Phase 3):** validated in-memory molecular datasets with HOMO/LUMO/gap properties and statistics. |
-| `mi-tensor`      | lib  | Numerical and tensor abstractions. **Implemented (Phase 4):** Burn Flex-backed CPU tensors with ingress validation; graph-preserving arithmetic, matrix, activation, and tensor-reduction operations; differentiable MSE/MAE/Huber losses; `require_grad`/`backward`/`grad` autodiff API; separated host-side evaluation utilities. |
+| `mi-io`          | lib  | Molecular file format I/O. **Implemented (current phase):** XYZ parser/writer; SDF (MDL V2000) parser/writer with bonds, formal charges, data fields, and multi-record files; dataset import with property attachment and energy-unit conversion; scientific provenance metadata; line-numbered typed errors; round-trip-tested formats. |
+| `mi-tensor`      | lib  | Numerical and tensor abstractions. **Implemented:** Burn Flex-backed CPU tensors with ingress validation; graph-preserving arithmetic, matrix, activation, and tensor-reduction operations; differentiable MSE/MAE/Huber losses; `require_grad`/`backward`/`grad` autodiff API; separated host-side evaluation utilities. |
 | `mi-models`      | lib  | Machine learning model definitions. |
 | `mi-training`    | lib  | Training infrastructure. |
 | `mi-evaluation`  | lib  | Scientific evaluation and metrics. |
@@ -65,9 +65,9 @@ molecular-intelligence/
 | `mi-python`      | lib  | Future Python interoperability layer. |
 | `mi-cli`         | bin  | Command-line interface. |
 
-These responsibilities are declarations of intent; `mi-chemistry` (Phase 1),
-`mi-graph` (Phase 2), `mi-data` (Phase 3), and `mi-tensor` (Phase 4) are
-implemented, and the rest remains future work.
+These responsibilities are declarations of intent; `mi-chemistry`,
+`mi-graph`, `mi-data`, `mi-tensor`, and `mi-io` are implemented, and the
+rest remains future work.
 
 ## Architecture
 

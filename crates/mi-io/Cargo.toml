@@ -1,0 +1,11 @@
+[package]
+name = "mi-io"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Molecular file format I/O for Molecular Intelligence."
+
+[dependencies]
+mi-chemistry = { path = "../mi-chemistry" }
+mi-data = { path = "../mi-data" }

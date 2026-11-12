@@ -1490,6 +1490,14 @@ name = "mi-inference"
 version = "0.1.0"
 
 [[package]]
+name = "mi-io"
+version = "0.1.0"
+dependencies = [
+ "mi-chemistry",
+ "mi-data",
+]
+
+[[package]]
 name = "mi-models"
 version = "0.1.0"
 
