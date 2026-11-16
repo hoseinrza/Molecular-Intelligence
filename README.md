@@ -6,7 +6,7 @@ representations to trained models and scientific evaluation, with an initial
 research focus on molecular property prediction — HOMO, LUMO, and the
 HOMO–LUMO gap.
 
-## Current Status: QM9 Pipeline
+## Current Status: Baseline Model (mi-models + mi-evaluation)
 
 The workspace foundation, chemistry core (Phase 1, `mi-chemistry`),
 molecular graphs (Phase 2, `mi-graph`), the scientific dataset layer
@@ -63,16 +63,17 @@ molecular-intelligence/
 | `mi-io`          | lib  | Molecular file format I/O. **Implemented:** XYZ parser/writer; SDF (MDL V2000) parser/writer with bonds, formal charges, data fields, and multi-record files; streaming record reader for dataset-scale files; dataset import with property attachment and energy-unit conversion; QM9 loader (uncharacterized exclusion, provenance metadata); scientific provenance metadata; line-numbered typed errors; round-trip-tested formats. |
 | `mi-tensor`      | lib  | Numerical and tensor abstractions. **Implemented:** Burn Flex-backed CPU tensors with ingress validation; graph-preserving arithmetic, matrix, activation, and tensor-reduction operations; differentiable MSE/MAE/Huber losses; `require_grad`/`backward`/`grad` autodiff API; separated host-side evaluation utilities. |
 | `mi-featurization` | lib | Molecular structure → ML tensors. **Implemented (current phase):** graph tensors from versioned feature schemas, Euclidean distance geometry from Cartesian positions, HOMO/LUMO/gap targets as values/mask tensors in eV; schema-version provenance; explicit-absence conventions. |
-| `mi-models`      | lib  | Machine learning model definitions. |
+| `mi-models`      | lib  | Machine learning model definitions. **Implemented (current phase):** MLP baseline (deterministic init, per-sample SGD, masked-MSE training) over molecular descriptors on Burn Flex CPU. |
 | `mi-training`    | lib  | Training infrastructure. |
-| `mi-evaluation`  | lib  | Scientific evaluation and metrics. |
+| `mi-evaluation`  | lib  | Scientific evaluation and metrics. **Implemented (current phase):** MAE/RMSE/R² for regression with typed degenerate-input errors. |
 | `mi-inference`   | lib  | Model inference. |
 | `mi-python`      | lib  | Future Python interoperability layer. |
 | `mi-cli`         | bin  | Command-line interface. |
 
 These responsibilities are declarations of intent; `mi-chemistry`,
-`mi-graph`, `mi-data`, `mi-tensor`, `mi-io`, and `mi-featurization` are
-implemented (through the QM9 pipeline), and the rest remains future work.
+`mi-graph`, `mi-data`, `mi-tensor`, `mi-io`, `mi-featurization`,
+`mi-models`, and `mi-evaluation` are implemented (through the baseline
+model), and the rest remains future work.
 
 ## Architecture
 

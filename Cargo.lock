@@ -1510,6 +1510,13 @@ dependencies = [
 [[package]]
 name = "mi-models"
 version = "0.1.0"
+dependencies = [
+ "mi-chemistry",
+ "mi-data",
+ "mi-evaluation",
+ "mi-featurization",
+ "mi-tensor",
+]
 
 [[package]]
 name = "mi-python"

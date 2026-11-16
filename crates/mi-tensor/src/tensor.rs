@@ -96,6 +96,30 @@ impl<const D: usize> Tensor<D> {
             .map_err(|e| TensorError::Readback(e.to_string()))
     }
 
+    /// Reshapes into a new rank `D2` without changing the element count.
+    ///
+    /// The operation runs in the backend and preserves the autodiff graph;
+    /// the runtime dimensions are re-validated here (non-zero, element
+    /// count unchanged) so the cached shape invariant holds.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `dims` contains a zero or the element count
+    /// changes.
+    pub fn reshape<const D2: usize>(self, dims: [usize; D2]) -> TensorResult<Tensor<D2>> {
+        let target = TensorShape::new(dims.to_vec())?;
+        if target.numel() != self.shape.numel() {
+            return Err(TensorError::DataLength {
+                expected: target.numel(),
+                actual: self.shape.numel(),
+            });
+        }
+        Ok(Tensor {
+            inner: self.inner.reshape(dims),
+            shape: target,
+        })
+    }
+
     /// Copies the single element of a one-element tensor to the host.
     ///
     /// This is an evaluation utility; it does not participate in autodiff.

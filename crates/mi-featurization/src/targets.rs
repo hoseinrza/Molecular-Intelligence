@@ -52,6 +52,19 @@ impl Targets {
         }
     }
 
+    /// Returns the value of one fixed-layout slot, if present.
+    ///
+    /// Slots follow the same `[homo, lumo, gap]` order as
+    /// [`Targets::to_tensors`]; an out-of-range slot yields `None`.
+    pub fn present_value(&self, slot: usize) -> Option<f32> {
+        match slot {
+            0 => self.homo,
+            1 => self.lumo,
+            2 => self.gap,
+            _ => None,
+        }
+    }
+
     /// Returns `(values, mask)`, both rank-1 tensors of length
     /// [`Targets::WIDTH`].
     ///
@@ -127,6 +140,18 @@ mod tests {
         assert_eq!(targets.homo, None);
         assert_eq!(targets.lumo, None);
         assert_eq!(targets.gap, None);
+    }
+
+    #[test]
+    fn present_value_follows_the_layout() {
+        let properties = ElectronicProperties::new()
+            .with_homo(Energy::from_ev(-5.0).unwrap())
+            .with_gap(Energy::from_ev(6.0).unwrap());
+        let targets = Targets::extract(&entry_with(properties));
+        assert_eq!(targets.present_value(0), Some(-5.0));
+        assert_eq!(targets.present_value(1), None);
+        assert_eq!(targets.present_value(2), Some(6.0));
+        assert_eq!(targets.present_value(3), None);
     }
 
     #[test]

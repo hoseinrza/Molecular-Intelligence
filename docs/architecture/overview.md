@@ -113,6 +113,12 @@ Expected (future) internal dependencies:
   substrate); it is the sanctioned junction where molecular
   representations meet numerical computation, so `mi-models` can consume a
   stable featurization API without importing chemistry itself.
+- `mi-models` — depends on `mi-tensor` (computation substrate) and, at the
+  experiment level, `mi-featurization` (descriptors/targets) and `mi-data`
+  (datasets); the MLP baseline trains with Burn's autodiff on the Flex
+  CPU backend.
+- `mi-evaluation` — depends on nothing: metrics are pure functions over
+  paired observations.
 - `mi-models` — depends on `mi-graph` (model inputs) and `mi-tensor`
   (computation substrate), plus `mi-core`.
 - `mi-training`, `mi-inference` — depend on `mi-models`, `mi-data`,

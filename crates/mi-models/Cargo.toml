@@ -5,3 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "Machine learning model definitions for Molecular Intelligence."
+
+[dependencies]
+mi-tensor = { path = "../mi-tensor" }
+
+[dev-dependencies]
+mi-chemistry = { path = "../mi-chemistry" }
+mi-data = { path = "../mi-data" }
+mi-evaluation = { path = "../mi-evaluation" }
+mi-featurization = { path = "../mi-featurization" }

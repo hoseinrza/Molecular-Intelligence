@@ -73,11 +73,13 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod descriptor;
 pub mod error;
 pub mod geometry;
 pub mod graph;
 pub mod targets;
 
+pub use descriptor::{DESCRIPTOR_WIDTH, descriptor_vector};
 pub use error::{FeaturizationError, FeaturizationResult};
 pub use geometry::{bond_distances, distance_matrix};
 pub use graph::{GraphTensors, featurize_graph, featurize_molecule};
