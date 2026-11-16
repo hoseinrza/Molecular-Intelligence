@@ -92,7 +92,9 @@ pub fn parse_sdf(input: &str) -> IoResult<Vec<SdfRecord>> {
                 records.push(parse_record(&current)?);
             }
             current.clear();
-        } else {
+        } else if !(current.is_empty() && text.trim().is_empty()) {
+            // Blank lines between records are separator noise; blank lines
+            // inside a record are structural and stay.
             current.push((number, text));
         }
     }
@@ -110,7 +112,7 @@ pub fn parse_sdf(input: &str) -> IoResult<Vec<SdfRecord>> {
 ///
 /// `lines` carries `(0-based file line number, text)` pairs so every
 /// reported error points at the real file position.
-fn parse_record(lines: &[(usize, &str)]) -> IoResult<SdfRecord> {
+pub(crate) fn parse_record(lines: &[(usize, &str)]) -> IoResult<SdfRecord> {
     if lines.len() < 4 {
         return Err(IoError::InvalidLine {
             line: lines.first().map_or(0, |(number, _)| number + 1),

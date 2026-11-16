@@ -28,6 +28,12 @@ pub enum DataError {
         /// The rejected value, verbatim.
         value: f64,
     },
+    /// A dataset split request is invalid (bad fractions or an empty
+    /// dataset).
+    InvalidSplit {
+        /// Human-readable description of the violated split rule.
+        reason: String,
+    },
     /// The dataset violates an internal consistency invariant.
     ///
     /// Defensive: entries validate their molecules at construction, so this
@@ -54,6 +60,9 @@ impl fmt::Display for DataError {
             }
             Self::InvalidEnergy { value } => {
                 write!(f, "invalid energy value {value}: must be finite")
+            }
+            Self::InvalidSplit { reason } => {
+                write!(f, "invalid dataset split: {reason}")
             }
             Self::InconsistentDataset { reason } => {
                 write!(f, "inconsistent dataset: {reason}")

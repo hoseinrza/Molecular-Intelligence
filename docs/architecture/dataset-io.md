@@ -153,6 +153,17 @@ unit fixed at the type level). Consequences:
     unsupported bond orders, truncated/empty documents, incomplete
     property data importing without properties.
 
+## Streaming and dataset-scale files
+
+Real dataset files (QM9's `qm9.sdf` is ~1.3 GB across 133,885 records)
+cannot be materialized wholesale, so the SDF module also provides a
+**streaming reader**: `sdf::SdfRecordReader` iterates records one at a
+time from any `BufRead` source (or a file path), with the same grammar and
+line-numbered errors as the eager parser and O(one-record) memory. The
+streaming and eager paths share the record grammar; the dataset-specific
+loader for QM9 lives in `mi_io::qm9` (see
+[qm9-pipeline.md](qm9-pipeline.md)).
+
 ## Limitations and future work
 
 1. **XYZ trajectories** (multi-molecule `.xyz` files) are not parsed yet.
@@ -164,5 +175,3 @@ unit fixed at the type level). Consequences:
 4. **Property fields cover electronic energies** (homo/lumo/gap); more
    observables (dipole moments, frequencies) will extend `PropertyFields`
    with their own units.
-5. **No incremental/streaming import yet** — files are parsed in memory,
-   which fits the current dataset scale.

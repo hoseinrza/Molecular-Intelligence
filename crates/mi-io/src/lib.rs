@@ -78,6 +78,7 @@
 pub mod error;
 pub mod import;
 pub mod metadata;
+pub mod qm9;
 pub mod sdf;
 pub mod xyz;
 
@@ -86,6 +87,7 @@ pub use import::{
     ImportOptions, ImportedDataset, PropertyFields, SkippedEntry, import_sdf, import_xyz,
 };
 pub use metadata::{DatasetMetadata, EnergyUnit};
+pub use qm9::{Qm9Options, Qm9Report, load_qm9_sdf, qm9_metadata, uncharacterized_indices};
 pub use sdf::{
     SdfRecord, parse_sdf, parse_sdf_file, write_sdf_file, write_sdf_molecule, write_sdf_record,
     write_sdf_records,

@@ -6,20 +6,24 @@ representations to trained models and scientific evaluation, with an initial
 research focus on molecular property prediction — HOMO, LUMO, and the
 HOMO–LUMO gap.
 
-## Current Status: Molecular Tensor (`mi-featurization`)
+## Current Status: QM9 Pipeline
 
 The workspace foundation, chemistry core (Phase 1, `mi-chemistry`),
 molecular graphs (Phase 2, `mi-graph`), the scientific dataset layer
 (Phase 3, `mi-data`), and the tensor backend (`mi-tensor`) are complete.
-`mi-featurization` now provides the molecular↔numerical junction:
-molecular graphs become `mi-tensor` tensors assembled from `mi-graph`'s
-versioned feature schemas (node matrix, directed edge index, edge
-features, with schema versions as provenance), Cartesian positions become
-Euclidean distance features in Ångström, and dataset entries become
-HOMO/LUMO/gap regression targets as an explicit values/mask tensor pair
-in electronvolts. Absence is always explicit (Option edges, presence
-masks) — no invented features, no sentinels. No models or training loops
-yet. See
+The QM9 pipeline is now in place end to end: `mi-io` streams QM9's SDF
+record-by-record (`sdf::SdfRecordReader`, O(one-record) memory for the
+~1.3 GB file), `mi_io::qm9` loads it into a validated dataset with
+explicit Hartree→eV energy conversion, `uncharacterized.txt` exclusion
+(counted, never hardcoded), and title/position verification; provenance
+metadata records the DFT level (B3LYP/6-31G(2df,p)). `mi-data::random_split`
+produces reproducible train/validation/test subsets from an explicit seed
+(deterministic Fisher–Yates with SplitMix64, pinned by tests). Together
+with the earlier layers — featurization (`mi-featurization`), tensors
+(`mi-tensor`), datasets (`mi-data`), I/O (`mi-io`) — the full path from
+raw QM9 files to model-ready tensors and splits exists in Rust. The next
+step is the first baseline model. Scientific caveat kept in the docs:
+QM9 properties are B3LYP DFT values, not GW or experimental observables. See
 [`docs/architecture/overview.md`](docs/architecture/overview.md),
 [`docs/architecture/dataset-layer.md`](docs/architecture/dataset-layer.md),
 [`docs/architecture/dataset-io.md`](docs/architecture/dataset-io.md),
@@ -55,8 +59,8 @@ molecular-intelligence/
 | `mi-core`        | lib  | Shared types, errors, and foundational abstractions. |
 | `mi-chemistry`   | lib  | Molecular and atomic representations. **Implemented (Phase 1):** elements, atoms, bonds, molecules, structural validation. |
 | `mi-graph`       | lib  | Molecular graph representations. **Implemented (Phase 2):** molecular graphs, feature schemas, adjacency, molecule-to-graph conversion. |
-| `mi-data`        | lib  | Dataset loading and data processing. **Implemented (Phase 3):** validated in-memory molecular datasets with HOMO/LUMO/gap properties and statistics. |
-| `mi-io`          | lib  | Molecular file format I/O. **Implemented (current phase):** XYZ parser/writer; SDF (MDL V2000) parser/writer with bonds, formal charges, data fields, and multi-record files; dataset import with property attachment and energy-unit conversion; scientific provenance metadata; line-numbered typed errors; round-trip-tested formats. |
+| `mi-data`        | lib  | Dataset loading and data processing. **Implemented (Phase 3 + current phase):** validated in-memory molecular datasets with HOMO/LUMO/gap properties, statistics, and reproducible seed-based random train/validation/test splitting. |
+| `mi-io`          | lib  | Molecular file format I/O. **Implemented:** XYZ parser/writer; SDF (MDL V2000) parser/writer with bonds, formal charges, data fields, and multi-record files; streaming record reader for dataset-scale files; dataset import with property attachment and energy-unit conversion; QM9 loader (uncharacterized exclusion, provenance metadata); scientific provenance metadata; line-numbered typed errors; round-trip-tested formats. |
 | `mi-tensor`      | lib  | Numerical and tensor abstractions. **Implemented:** Burn Flex-backed CPU tensors with ingress validation; graph-preserving arithmetic, matrix, activation, and tensor-reduction operations; differentiable MSE/MAE/Huber losses; `require_grad`/`backward`/`grad` autodiff API; separated host-side evaluation utilities. |
 | `mi-featurization` | lib | Molecular structure → ML tensors. **Implemented (current phase):** graph tensors from versioned feature schemas, Euclidean distance geometry from Cartesian positions, HOMO/LUMO/gap targets as values/mask tensors in eV; schema-version provenance; explicit-absence conventions. |
 | `mi-models`      | lib  | Machine learning model definitions. |
@@ -68,7 +72,7 @@ molecular-intelligence/
 
 These responsibilities are declarations of intent; `mi-chemistry`,
 `mi-graph`, `mi-data`, `mi-tensor`, `mi-io`, and `mi-featurization` are
-implemented, and the rest remains future work.
+implemented (through the QM9 pipeline), and the rest remains future work.
 
 ## Architecture
 

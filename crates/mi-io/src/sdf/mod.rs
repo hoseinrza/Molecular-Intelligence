@@ -14,7 +14,9 @@
 //! cannot be written (no MDL code) and is rejected on write.
 
 mod parser;
+mod stream;
 mod writer;
 
 pub use parser::{SdfRecord, parse_sdf, parse_sdf_file};
+pub use stream::SdfRecordReader;
 pub use writer::{write_sdf_file, write_sdf_molecule, write_sdf_record, write_sdf_records};

@@ -15,8 +15,9 @@
 //! - Every entry exposes an on-demand molecular graph through `mi-graph`,
 //!   bridging datasets to future message-passing models.
 //!
-//! File-format loading, serialization, and train/validation/test splitting
-//! are planned future extensions.
+//! Reproducible train/validation/test splitting is implemented
+//! ([`split`]); file-format loading and serialization arrive through
+//! `mi-io` at the ingestion boundary.
 //!
 //! # Example
 //!
@@ -55,6 +56,7 @@ pub mod dataset;
 pub mod entry;
 pub mod error;
 pub mod property;
+pub mod split;
 
 #[cfg(test)]
 mod test_support;
@@ -63,3 +65,4 @@ pub use dataset::{DatasetStatistics, MolecularDataset, PropertySummary};
 pub use entry::MolecularEntry;
 pub use error::DataError;
 pub use property::{ElectronicProperties, Energy};
+pub use split::{Split, SplitFractions, random_split};

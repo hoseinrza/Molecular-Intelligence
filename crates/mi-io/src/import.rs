@@ -207,32 +207,94 @@ pub fn import_sdf(
         return Err(IoError::EmptyInput { context: "SDF" });
     }
 
-    let mut dataset = MolecularDataset::new();
-    let mut skipped = Vec::new();
+    let mut accumulator = ImportAccumulator::new();
     for (source_index, record) in records.iter().enumerate() {
+        accumulator.push(
+            source_index,
+            record,
+            metadata.energy_unit(),
+            options.property_fields(),
+            options.is_strict(),
+        )?;
+    }
+    let (dataset, metadata, skipped) = accumulator.finish(metadata);
+    Ok(ImportedDataset {
+        dataset,
+        metadata,
+        skipped,
+    })
+}
+
+/// Shared record-accumulation state for dataset imports.
+///
+/// Both [`import_sdf`] (in-memory slices) and the QM9 loader (streaming
+/// records) funnel through this type so the skip/strict policy — and the
+/// nothing-dropped-silently report — is defined exactly once.
+pub(crate) struct ImportAccumulator {
+    dataset: MolecularDataset,
+    skipped: Vec<SkippedEntry>,
+    record_count: usize,
+    accepted_count: usize,
+}
+
+impl ImportAccumulator {
+    pub(crate) fn new() -> Self {
+        Self {
+            dataset: MolecularDataset::new(),
+            skipped: Vec::new(),
+            record_count: 0,
+            accepted_count: 0,
+        }
+    }
+
+    /// Processes one record at its 1-based source position.
+    ///
+    /// # Errors
+    ///
+    /// In strict mode, the first record-level failure aborts the import.
+    pub(crate) fn push(
+        &mut self,
+        source_index: usize,
+        record: &SdfRecord,
+        energy_unit: EnergyUnit,
+        property_fields: &PropertyFields,
+        strict: bool,
+    ) -> IoResult<()> {
+        self.record_count += 1;
         let title = record.molecule().name().map(str::to_string);
-        match build_entry(record, metadata.energy_unit(), options) {
+        match build_entry(record, energy_unit, property_fields) {
             Ok((entry, properties)) => {
-                dataset.push(entry.with_properties(properties));
+                self.dataset.push(entry.with_properties(properties));
+                self.accepted_count += 1;
             }
             Err(reason) => {
-                if options.is_strict() {
+                if strict {
                     return Err(reason);
                 }
-                skipped.push(SkippedEntry {
+                self.skipped.push(SkippedEntry {
                     source_index,
                     title,
                     reason,
                 });
             }
         }
+        Ok(())
     }
 
-    Ok(ImportedDataset {
-        dataset: dataset.with_name(metadata.source().to_string()),
-        metadata,
-        skipped,
-    })
+    /// The number of records seen (accepted + skipped).
+    pub(crate) fn record_count(&self) -> usize {
+        self.record_count
+    }
+
+    /// Names the dataset after the metadata source and yields the import
+    /// parts: `(dataset, metadata, skipped)`.
+    pub(crate) fn finish(
+        self,
+        metadata: DatasetMetadata,
+    ) -> (MolecularDataset, DatasetMetadata, Vec<SkippedEntry>) {
+        let dataset = self.dataset.with_name(metadata.source().to_string());
+        (dataset, metadata, self.skipped)
+    }
 }
 
 /// Imports a single XYZ molecule as a one-entry dataset.
@@ -259,12 +321,11 @@ pub fn import_xyz(molecule: Molecule, metadata: DatasetMetadata) -> IoResult<Imp
 fn build_entry(
     record: &SdfRecord,
     unit: EnergyUnit,
-    options: &ImportOptions,
+    fields: &PropertyFields,
 ) -> IoResult<(MolecularEntry, ElectronicProperties)> {
     let entry = MolecularEntry::new(record.molecule().clone())
         .map_err(|source| IoError::DataRejected { source })?;
 
-    let fields = &options.property_fields;
     let homo = record
         .data_field(fields.homo_field())
         .map(|value| parse_energy(fields.homo_field(), value, unit));
