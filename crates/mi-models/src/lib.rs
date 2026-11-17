@@ -35,8 +35,10 @@
 //!   Python in the loop (the stack decision of the research roadmap).
 //! - **Batch size 1**: parameters update per sample; batching needs
 //!   broadcasting in the tensor layer and is a documented future step.
-//! - **No optimizers beyond SGD yet**, no early stopping, no learning-rate
-//!   schedules — the baseline establishes the training pattern first.
+//! - **Model, not trainer**: optimization (SGD/momentum, Adam) and
+//!   learning-rate schedules live in `mi-training`, which drives this
+//!   crate's models through [`Mlp::update_with`] — the leaf-renewal update
+//!   hook that respects Burn's consumed-graph backward contract.
 //!
 //! Scientific evaluation lives in `mi-evaluation` (MAE/RMSE/R²); this
 //! crate reports only training losses.
@@ -46,8 +48,8 @@
 
 pub mod error;
 pub mod model;
-pub mod training;
+pub mod sample;
 
 pub use error::{ModelError, ModelResult};
 pub use model::{Mlp, MlpConfig};
-pub use training::{EpochMetrics, RegressionSample, predict, train_sgd};
+pub use sample::{RegressionSample, predict};

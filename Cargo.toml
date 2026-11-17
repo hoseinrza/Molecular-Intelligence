@@ -14,6 +14,7 @@ members = [
     "crates/mi-inference",
     "crates/mi-python",
     "crates/mi-cli",
+    "crates/mi-benchmark",
 ]
 
 [workspace.package]

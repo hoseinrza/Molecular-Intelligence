@@ -5,3 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "Training infrastructure for Molecular Intelligence."
+
+[dependencies]
+mi-models = { path = "../mi-models" }
+mi-tensor = { path = "../mi-tensor" }

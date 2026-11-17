@@ -25,8 +25,9 @@ use mi_data::{
 };
 use mi_evaluation::{mae, r2, rmse};
 use mi_featurization::{DESCRIPTOR_WIDTH, Targets, descriptor_vector};
-use mi_models::{Mlp, MlpConfig, RegressionSample, predict, train_sgd};
+use mi_models::{Mlp, MlpConfig, RegressionSample, predict};
 use mi_tensor::{Cpu, Tensor, TensorShape};
+use mi_training::{LrSchedule, Sgd, TrainConfig, train};
 
 /// Six small molecules with fixed synthetic targets in eV; descriptors
 /// differ by construction (different elements, bond orders, sizes).
@@ -270,7 +271,18 @@ fn training_reduces_loss_and_reaches_high_train_r2() {
     let mut model = Mlp::new_with_seed(config.clone(), &training_device, 7).unwrap();
 
     let epochs = 800;
-    let history = train_sgd(&mut model, &prepared.samples, epochs, 0.01).unwrap();
+    let history = train(
+        &mut model,
+        &prepared.samples,
+        &mut Sgd::new(0.0).unwrap(),
+        &TrainConfig {
+            epochs,
+            base_lr: 0.01,
+            schedule: LrSchedule::Constant,
+        },
+        &training_device,
+    )
+    .unwrap();
     assert_eq!(history.len(), epochs);
     assert_eq!(history[0].epoch, 0);
     // The machinery learns: the final epoch loss is a small fraction of
@@ -348,8 +360,27 @@ fn same_seed_produces_the_same_loss_curve() {
     let mut first = Mlp::new_with_seed(config.clone(), &training_device, 7).unwrap();
     let mut second = Mlp::new_with_seed(config, &training_device, 7).unwrap();
 
-    let first_history = train_sgd(&mut first, &prepared.samples, 40, 0.01).unwrap();
-    let second_history = train_sgd(&mut second, &prepared.samples, 40, 0.01).unwrap();
+    let config = TrainConfig {
+        epochs: 40,
+        base_lr: 0.01,
+        schedule: LrSchedule::Constant,
+    };
+    let first_history = train(
+        &mut first,
+        &prepared.samples,
+        &mut Sgd::new(0.0).unwrap(),
+        &config,
+        &training_device,
+    )
+    .unwrap();
+    let second_history = train(
+        &mut second,
+        &prepared.samples,
+        &mut Sgd::new(0.0).unwrap(),
+        &config,
+        &training_device,
+    )
+    .unwrap();
     assert_eq!(first_history, second_history);
 }
 
@@ -375,7 +406,18 @@ fn fully_masked_samples_are_skipped_and_counted() {
         output_dim: Targets::WIDTH,
     };
     let mut model = Mlp::new_with_seed(config, &training_device, 3).unwrap();
-    let history = train_sgd(&mut model, &prepared.samples, 5, 0.01).unwrap();
+    let history = train(
+        &mut model,
+        &prepared.samples,
+        &mut Sgd::new(0.0).unwrap(),
+        &TrainConfig {
+            epochs: 5,
+            base_lr: 0.01,
+            schedule: LrSchedule::Constant,
+        },
+        &training_device,
+    )
+    .unwrap();
     for metrics in history {
         assert_eq!(metrics.skipped_samples, 1);
         assert_eq!(metrics.mean_loss, 0.0, "skipped epochs carry no loss");

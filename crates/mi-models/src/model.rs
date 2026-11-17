@@ -16,7 +16,7 @@
 //! steps independent. Fresh leaves are also why no `retain_graph` exists.
 
 use crate::error::{ModelError, ModelResult};
-use mi_tensor::operations::{add, matmul, mul_scalar, relu};
+use mi_tensor::operations::{add, matmul, relu};
 use mi_tensor::{Device, Gradients, Tensor, TensorShape};
 
 /// Layer dimensions of an MLP: `[input, hidden…, output]`.
@@ -176,26 +176,33 @@ impl Mlp {
         Ok(activation)
     }
 
-    /// Runs one SGD step over every parameter using the gradients of the
-    /// most recent backward pass: `p ← detach(p − lr·∇p).require_grad()`.
+    /// Applies a per-parameter update using the gradients of the most
+    /// recent backward pass.
     ///
+    /// `updater` receives the stable parameter index (weight then bias per
+    /// layer, matching [`parameter_values`](Mlp::parameter_values)), the
+    /// current parameter, and its gradient, and returns the updated
+    /// values. The model renews every updated parameter as a **fresh
+    /// autodiff leaf** (`detach` + `require_grad`): Burn consumes the
+    /// recorded graph at `backward`, so a new step must not depend on it.
     /// Parameters absent from `gradients` (they did not influence the
-    /// loss) keep their values.
+    /// loss) keep their values and their index slot.
     ///
     /// # Errors
     ///
-    /// Returns [`ModelError::Tensor`] for readback or update failures.
-    pub fn sgd_step(&mut self, gradients: &Gradients, lr: f32) -> ModelResult<()> {
+    /// Returns [`ModelError::Tensor`] for updater, readback, or renewal
+    /// failures.
+    pub fn update_with<F>(&mut self, gradients: &Gradients, mut updater: F) -> ModelResult<()>
+    where
+        F: FnMut(usize, &Tensor<2>, &Tensor<2>) -> mi_tensor::TensorResult<Tensor<2>>,
+    {
+        let mut index = 0usize;
         for (weight, bias) in self.weights.iter_mut().zip(&mut self.biases) {
             for parameter in [weight, bias] {
                 if let Some(grad) = parameter.grad(gradients) {
-                    let delta = mul_scalar(&grad, lr)?;
-                    let updated = mi_tensor::operations::sub(parameter, &delta)?;
-                    // Renew as a fresh tracked leaf: the recorded graph was
-                    // consumed by backward, and a new step must not depend
-                    // on it.
-                    *parameter = updated.detach().require_grad()?;
+                    *parameter = updater(index, parameter, &grad)?.detach().require_grad()?;
                 }
+                index += 1;
             }
         }
         Ok(())
@@ -410,8 +417,9 @@ mod tests {
     }
 
     #[test]
-    fn sgd_steps_reduced_a_quadratic_loss() {
-        // Minimize f(w) = Σ (w·x + b − y)² on one sample: loss must fall.
+    fn update_with_reduces_a_quadratic_loss() {
+        // Minimize f(w) = Σ (w·x + b − y)² with a plain SGD closure routed
+        // through the generic update hook: loss must fall.
         let device = training_device();
         let mut model = Mlp::new_with_seed(
             MlpConfig {
@@ -433,6 +441,7 @@ mod tests {
             Tensor::<2>::from_data(vec![3.0], TensorShape::new(vec![1, 1]).unwrap(), &device)
                 .unwrap();
 
+        let learning_rate = 0.05f32;
         let mut losses = Vec::new();
         for _ in 0..200 {
             let prediction = model.forward(&input).unwrap();
@@ -442,7 +451,18 @@ mod tests {
             let value = loss.item().unwrap();
             losses.push(value);
             let gradients = loss.backward().unwrap();
-            model.sgd_step(&gradients, 0.05).unwrap();
+            model
+                .update_with(&gradients, |_index, parameter, gradient| {
+                    let values = parameter.to_vec()?;
+                    let deltas = gradient.to_vec()?;
+                    let updated: Vec<f32> = values
+                        .iter()
+                        .zip(&deltas)
+                        .map(|(value, delta)| value - learning_rate * delta)
+                        .collect();
+                    Tensor::from_data(updated, parameter.shape().clone(), &device)
+                })
+                .unwrap();
         }
         assert!(
             losses[losses.len() - 1] < losses[0] * 0.01,

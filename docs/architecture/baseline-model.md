@@ -63,20 +63,24 @@ descriptor-based models can consume any dataset entry.
 - `forward` — batch size **1** (`[1, D] → [1, out]`): the tensor layer
   implements no broadcasting yet, and batch-1 keeps every operation
   same-shaped. Hidden layers apply ReLU; the output layer is linear.
-- `sgd_step(gradients, lr)` — per-parameter update with the **leaf
-  renewal cycle**: `p ← detach(p − lr·∇p).require_grad()`. Burn consumes
-  the recorded graph at `backward` (no `retain_graph`), so each step must
+- `update_with(gradients, updater)` — the per-parameter **update hook**
+  with the leaf renewal cycle: the updater returns new values, the model
+  applies `p ← detach(p_updated).require_grad()`. Burn consumes the
+  recorded graph at `backward` (no `retain_graph`), so each step must
   start from fresh leaves; this cycle is the sanctioned pattern and is
-  unit-tested for convergence.
+  unit-tested for convergence. (`update_with` replaced Phase 7's
+  `sgd_step` when optimization moved to `mi-training`; see
+  [`training.md`](training.md).)
 - `parameter_values()` / `with_parameters(config, values, device)` — the
   snapshot/rebuild pair: training runs on `Cpu::training()`, evaluation
   rebuilds the same architecture (untracked) on `Cpu::inference()`.
-- `training::train_sgd` — the canonical loop: per sample, forward →
-  **masked MSE** `Σ(p−y)²·m / Σm` (composed from tensor ops, so it stays
-  differentiable; absent targets contribute nothing and all-masked
-  samples are skipped *and counted*) → `backward` → `sgd_step`. Returns
-  per-epoch host metrics (mean loss, skip counts). `training::predict`
-  is the evaluation-side forward.
+- The canonical training loop moved to **`mi-training::train`** in
+  Phase 9: per sample, forward → **masked MSE** `Σ(p−y)²·m / Σm`
+  (composed from tensor ops, so it stays differentiable; absent targets
+  contribute nothing and all-masked samples are skipped *and counted*)
+  → `backward` → optimizer step via `update_with`. Returns per-epoch
+  host metrics (mean loss, skip counts). `predict` remains the
+  evaluation-side forward here.
 
 ### `mi-evaluation` — reported metrics
 Pure functions over paired observations (`f32` in, `f64` arithmetic):
@@ -139,12 +143,14 @@ state its split, preprocessing, and hyperparameters alongside.
    performance on the table; batching needs broadcasting in the tensor
    layer (planned `mi-tensor` addition) and padded graph batching for
    message-passing models.
-2. **SGD only** — no momentum/Adam, no learning-rate schedules, no early
-   stopping; the validation subset exists but checkpoint selection is
-   manual for now.
-3. **Standardization is a documented recipe, not a library API** — the
-   benchmark suite (Phase 8) should lift the z-score scaler into
-   `mi-featurization` so train/eval share one fitted scaler.
+2. ~~**SGD only**~~ — **addressed in Phase 9**: `mi-training` now
+   provides SGD with momentum and Adam plus learning-rate schedules
+   ([`training.md`](training.md)). Early stopping is still future work;
+   the validation subset exists and checkpoint selection runs
+   benchmark-side.
+3. ~~**Standardization is a documented recipe, not a library API**~~ —
+   **addressed in Phase 8**: `mi-featurization::scaler` provides the
+   shared fitted z-score scaler.
 4. **No uncertainty output** (Experiment 03 of the research plan) —
    ensembles and MC-dropout come after the first benchmark numbers.
 5. **The MLP consumes only the fixed-size descriptor**; the graph

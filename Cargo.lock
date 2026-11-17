@@ -1455,6 +1455,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
+name = "mi-benchmark"
+version = "0.1.0"
+dependencies = [
+ "mi-data",
+ "mi-evaluation",
+ "mi-featurization",
+ "mi-io",
+ "mi-models",
+ "mi-tensor",
+ "mi-training",
+]
+
+[[package]]
 name = "mi-chemistry"
 version = "0.1.0"
 
@@ -1516,6 +1529,7 @@ dependencies = [
  "mi-evaluation",
  "mi-featurization",
  "mi-tensor",
+ "mi-training",
 ]
 
 [[package]]
@@ -1532,6 +1546,10 @@ dependencies = [
 [[package]]
 name = "mi-training"
 version = "0.1.0"
+dependencies = [
+ "mi-models",
+ "mi-tensor",
+]
 
 [[package]]
 name = "miniz_oxide"

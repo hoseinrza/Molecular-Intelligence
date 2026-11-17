@@ -6,24 +6,31 @@ representations to trained models and scientific evaluation, with an initial
 research focus on molecular property prediction — HOMO, LUMO, and the
 HOMO–LUMO gap.
 
-## Current Status: Baseline Model (mi-models + mi-evaluation)
+## Current Status: Phase 9 — Training Infrastructure
 
-The workspace foundation, chemistry core (Phase 1, `mi-chemistry`),
-molecular graphs (Phase 2, `mi-graph`), the scientific dataset layer
-(Phase 3, `mi-data`), and the tensor backend (`mi-tensor`) are complete.
-The QM9 pipeline is now in place end to end: `mi-io` streams QM9's SDF
-record-by-record (`sdf::SdfRecordReader`, O(one-record) memory for the
-~1.3 GB file), `mi_io::qm9` loads it into a validated dataset with
-explicit Hartree→eV energy conversion, `uncharacterized.txt` exclusion
-(counted, never hardcoded), and title/position verification; provenance
-metadata records the DFT level (B3LYP/6-31G(2df,p)). `mi-data::random_split`
-produces reproducible train/validation/test subsets from an explicit seed
-(deterministic Fisher–Yates with SplitMix64, pinned by tests). Together
-with the earlier layers — featurization (`mi-featurization`), tensors
-(`mi-tensor`), datasets (`mi-data`), I/O (`mi-io`) — the full path from
-raw QM9 files to model-ready tensors and splits exists in Rust. The next
-step is the first baseline model. Scientific caveat kept in the docs:
-QM9 properties are B3LYP DFT values, not GW or experimental observables. See
+The full pipeline exists and has produced measured results: raw
+QM9 files (`mi-io`, with explicit Hartree→eV conversion and
+`uncharacterized.txt` exclusions) → validated dataset (`mi-data`) →
+reproducible 80/10/10 split (seeded Fisher–Yates) → descriptors and
+targets (`mi-featurization`) → MLP baseline trained with per-sample SGD
+on Burn's Flex CPU autodiff (`mi-models`) → MAE/RMSE/R² in electronvolts
+(`mi-evaluation`). `mi-benchmark` executes the whole procedure as the
+`qm9-baseline` binary: training-subset-only z-score standardization
+(`mi-featurization::scaler`), validation-based checkpoint selection, and
+JSON + Markdown reports with full provenance (split seed, schema
+layouts, hyperparameters, timings) in `benchmarks/`. `mi-training`
+(Phase 9) provides the optimization layer — SGD with momentum and Adam
+over the leaf-renewal update contract (`Mlp::update_with`), plus
+constant/exponential/cosine learning-rate schedules — driving the
+recorded full-dataset runs: plain SGD reaches test MAE 0.256 eV (HOMO) /
+0.342 eV (LUMO) / 0.415 eV (gap)
+([`benchmarks/qm9-baseline/`](benchmarks/qm9-baseline/result.md)), and
+Adam with cosine annealing improves on it
+([`benchmarks/qm9-adam-cosine/`](benchmarks/qm9-adam-cosine/result.md)).
+Scientific caveat kept in the docs: QM9 properties are B3LYP DFT values,
+not GW or experimental observables. See
+[`docs/architecture/benchmark.md`](docs/architecture/benchmark.md),
+[`docs/architecture/baseline-model.md`](docs/architecture/baseline-model.md),
 [`docs/architecture/overview.md`](docs/architecture/overview.md),
 [`docs/architecture/dataset-layer.md`](docs/architecture/dataset-layer.md),
 [`docs/architecture/dataset-io.md`](docs/architecture/dataset-io.md),
@@ -64,16 +71,17 @@ molecular-intelligence/
 | `mi-tensor`      | lib  | Numerical and tensor abstractions. **Implemented:** Burn Flex-backed CPU tensors with ingress validation; graph-preserving arithmetic, matrix, activation, and tensor-reduction operations; differentiable MSE/MAE/Huber losses; `require_grad`/`backward`/`grad` autodiff API; separated host-side evaluation utilities. |
 | `mi-featurization` | lib | Molecular structure → ML tensors. **Implemented (current phase):** graph tensors from versioned feature schemas, Euclidean distance geometry from Cartesian positions, HOMO/LUMO/gap targets as values/mask tensors in eV; schema-version provenance; explicit-absence conventions. |
 | `mi-models`      | lib  | Machine learning model definitions. **Implemented (current phase):** MLP baseline (deterministic init, per-sample SGD, masked-MSE training) over molecular descriptors on Burn Flex CPU. |
-| `mi-training`    | lib  | Training infrastructure. |
+| `mi-training`    | lib  | Training infrastructure. **Implemented (Phase 9):** canonical masked-MSE loop; SGD with momentum and Adam over the leaf-renewal update contract; constant/exponential/cosine learning-rate schedules. |
 | `mi-evaluation`  | lib  | Scientific evaluation and metrics. **Implemented (current phase):** MAE/RMSE/R² for regression with typed degenerate-input errors. |
 | `mi-inference`   | lib  | Model inference. |
 | `mi-python`      | lib  | Future Python interoperability layer. |
 | `mi-cli`         | bin  | Command-line interface. |
+| `mi-benchmark`   | bin  | Benchmark suite. **Implemented (Phase 8):** `qm9-baseline` — the Experiment 01 pipeline with shared z-score scalers, validation checkpoint selection, and provenance-complete JSON/Markdown reports. |
 
 These responsibilities are declarations of intent; `mi-chemistry`,
 `mi-graph`, `mi-data`, `mi-tensor`, `mi-io`, `mi-featurization`,
-`mi-models`, and `mi-evaluation` are implemented (through the baseline
-model), and the rest remains future work.
+`mi-models`, `mi-evaluation`, and `mi-benchmark` are implemented
+(through the baseline benchmark), and the rest remains future work.
 
 ## Architecture
 

@@ -22,6 +22,9 @@ pub enum FeaturizationError {
         /// The 0-based index of the position-less atom.
         atom_index: usize,
     },
+    /// A standardization input is unusable (empty data, inconsistent
+    /// widths, or an out-of-range column).
+    InvalidScalerInput(String),
 }
 
 impl fmt::Display for FeaturizationError {
@@ -33,6 +36,7 @@ impl fmt::Display for FeaturizationError {
                 f,
                 "atom {atom_index} has no position, which geometry features require"
             ),
+            Self::InvalidScalerInput(reason) => write!(f, "invalid scaler input: {reason}"),
         }
     }
 }
@@ -42,7 +46,7 @@ impl std::error::Error for FeaturizationError {
         match self {
             Self::Graph(source) => Some(source),
             Self::Tensor(source) => Some(source),
-            Self::MissingPosition { .. } => None,
+            Self::MissingPosition { .. } | Self::InvalidScalerInput(_) => None,
         }
     }
 }

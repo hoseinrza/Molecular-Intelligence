@@ -77,10 +77,12 @@ pub mod descriptor;
 pub mod error;
 pub mod geometry;
 pub mod graph;
+pub mod scaler;
 pub mod targets;
 
 pub use descriptor::{DESCRIPTOR_WIDTH, descriptor_vector};
 pub use error::{FeaturizationError, FeaturizationResult};
 pub use geometry::{bond_distances, distance_matrix};
 pub use graph::{GraphTensors, featurize_graph, featurize_molecule};
+pub use scaler::{ColumnScalers, StandardScaler};
 pub use targets::Targets;
