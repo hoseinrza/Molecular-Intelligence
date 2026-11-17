@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Molecular Intelligence — مقایسه با مراجع QM9 و پیل پایتون</title>
+<style>
+  :root {
+    --bg: #f7f8fa; --card: #ffffff; --ink: #1a2332; --muted: #5b6472;
+    --accent: #0f6ec9; --accent-soft: #e8f1fb; --line: #e3e7ee;
+    --ours: #0f6ec9; --ref: #8a93a3; --good: #147d52; --warn: #9a6b00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", Tahoma, "Iranian Sans", Vazirmatn, sans-serif;
+    font-size: 15px; line-height: 1.75;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 64px; }
+  header.hero {
+    background: linear-gradient(135deg, #10243e, #0f6ec9);
+    color: #fff; border-radius: 16px; padding: 28px 32px; margin-bottom: 28px;
+  }
+  header.hero h1 { margin: 0 0 8px; font-size: 26px; }
+  header.hero p { margin: 4px 0; opacity: .92; font-size: 14px; }
+  .meta { font-size: 12.5px; opacity: .8; }
+  h2 { font-size: 20px; margin: 40px 0 12px; padding-inline-start: 12px;
+       border-inline-start: 4px solid var(--accent); }
+  h3 { font-size: 16px; margin: 24px 0 8px; }
+  p { margin: 8px 0; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 24px; margin: 14px 0;
+  }
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 14px 0; }
+  .stat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px; text-align: center;
+  }
+  .stat .big { font-size: 26px; font-weight: 700; color: var(--accent); direction: ltr; }
+  .stat .lbl { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+          border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13.5px;
+           text-align: center; }
+  th { background: var(--accent-soft); font-weight: 700; }
+  tr.ours { background: var(--accent-soft); font-weight: 600; }
+  td.num { direction: ltr; font-variant-numeric: tabular-nums; }
+  td.right, th.right { text-align: right; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 999px;
+         font-size: 11.5px; font-weight: 600; }
+  .tag.local { background: #dcefe4; color: var(--good); }
+  .tag.published { background: #eee7f8; color: #5b3fa8; }
+  .tag.gnn { background: #fdf1dd; color: var(--warn); }
+  .note { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  ul { padding-inline-start: 22px; }
+  li { margin: 5px 0; }
+  code, pre {
+    font-family: Consolas, "Courier New", monospace; direction: ltr;
+    font-size: 12.5px;
+  }
+  pre {
+    background: #101828; color: #dbe6f5; padding: 14px 16px; border-radius: 10px;
+    overflow-x: auto; line-height: 1.6;
+  }
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  footer { margin-top: 44px; font-size: 12.5px; color: var(--muted);
+           border-top: 1px solid var(--line); padding-top: 14px; }
+  .legend { display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+  .bar-block { margin: 10px 0 18px; }
+  .bar-row { display: grid; grid-template-columns: 190px 1fr 90px; gap: 10px;
+             align-items: center; margin: 7px 0; direction: ltr; }
+  .bar-label { font-size: 12.5px; color: var(--muted); text-align: left; }
+  .bar-track { background: #edf0f5; border-radius: 6px; height: 18px; position: relative; }
+  .bar-fill { height: 100%; border-radius: 6px; min-width: 2px; }
+  .bar-value { font-size: 12.5px; font-variant-numeric: tabular-nums; text-align: left; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>مقایسه Molecular Intelligence با مراجع بنچ‌مارک QM9</h1>
+  <p>نتایج اندازه‌گیری‌شده‌ی پروژه (Rust-native، Burn Flex CPU) در برابر اعداد منتشرشده‌ی سیستم‌های مشابه در ادبیات</p>
+  <p class="meta">نسخه‌ی داده: کامیت <code dir="ltr">3b96c93</code> · تاریخ اجرا: ۲۰۲۶-۱۱-۱۷ · سخت‌افزار: CPU محلی (ویندوز، بدون GPU) · هر دو ران: seed 42، معماری 18→[64,32]→3، ۶۰ epoch</p>
+</header>
+
+<h2>۱) سیستم من — چه چیزی اندازه گرفته شده</h2>
+<div class="card">
+  <p>
+    کل زنجیره روی <b>۱۳۰,۸۳۱ مولکول QM9</b> (۱۳۳,۸۸۵ رکورد منهای ۳,۰۵۴ استثنا) اجرا شد:
+    بارگذاری SDF با استثناسازی → تقسیم ۸۰/۱۰/۱۰ (seed 42) → descriptor 18-slotty →
+    استانداردسازی فقط روی train → آموزش MLP با masked-MSE → انتخاب checkpoint با
+    validation MAE → متریک‌های test به تفکیک HOMO / LUMO / Gap (بر حسب eV).
+  </p>
+  <div class="cards3">
+    <div class="stat"><div class="big">0.2534 eV</div><div class="lbl">Test MAE — HOMO (Adam + cosine)</div></div>
+    <div class="stat"><div class="big">0.3213 eV</div><div class="lbl">Test MAE — LUMO (Adam + cosine)</div></div>
+    <div class="stat"><div class="big">0.3987 eV</div><div class="lbl">Test MAE — Gap (Adam + cosine)</div></div>
+  </div>
+  <p class="note">
+    ران SGD (فاز ۸): 0.2562 / 0.3420 / 0.4153 eV — Adam + cosine همه‌ی اسلات‌ها را بهتر کرده است.
+    زمان‌ها: بارگذاری 1.8s، featurize 1.8s، آموزش SGD 586s، آموزش Adam 2056s، ارزیابی 0.1s.
+  </p>
+</div>
+
+<h2>۲) مقایسه با اعداد منتشرشده‌ی سیستم‌های مشابه</h2>
+<div class="card">
+  <p>
+    دو دسته‌ی مرجع انتخاب شده‌اند: <b>هم‌کلاس ورودی</b> (مدل‌های descriptor/fingerprint بدون گراف سه‌بعدی)
+    و <b>کلاس گراف سه‌بعدی</b> (GNN هایی که مختصات اتمی و پیوندها را مصرف می‌کنند — سقف مرجع).
+    اعداد مرجع از مقالات/ریپوهای رسمی نقل شده‌اند؛ اعداد ردیف‌های آبی اندازه‌گیری محلی این پروژه‌اند.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th class="right">سیستم (سال)</th>
+        <th class="right">ورودی مدل</th>
+        <th class="right">نوع عدد</th>
+        <th>HOMO<br>(meV)</th>
+        <th>LUMO<br>(meV)</th>
+        <th>Gap<br>(meV)</th>
+        <th class="right">مرجع</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="ours">
+        <td class="right">Molecular Intelligence — MLP (۲۰۲۶)</td>
+        <td class="right">۱۸ descriptor سراسری</td>
+        <td class="right"><span class="tag local">اندازه‌گیری محلی</span></td>
+        <td class="num">253.4</td>
+        <td class="num">321.3</td>
+        <td class="num">398.7</td>
+        <td class="right">این پروژه (Adam + cosine، epoch 58)</td>
+      </tr>
+      <tr class="ours">
+        <td class="right">Molecular Intelligence — MLP (۲۰۲۶)</td>
+        <td class="right">۱۸ descriptor سراسری</td>
+        <td class="right"><span class="tag local">اندازه‌گیری محلی</span></td>
+        <td class="num">256.2</td>
+        <td class="num">342.0</td>
+        <td class="num">415.3</td>
+        <td class="right">این پروژه (SGD ثابت، epoch 35)</td>
+      </tr>
+      <tr>
+        <td class="right">RF + ECFP fingerprints — Pereira ۲۰۱۷</td>
+        <td class="right">fingerprint اتصالی (هم‌کلاسِ غنی‌تر)</td>
+        <td class="right"><span class="tag published">منتشرشده</span></td>
+        <td class="num">≈150</td>
+        <td class="num">≈160</td>
+        <td class="num">—</td>
+        <td class="right"><a href="https://www.academia.edu/33502697/">Pereira et al., JCIM 2017</a></td>
+      </tr>
+      <tr>
+        <td class="right">SchNet (۲۰۱۷)</td>
+        <td class="right">گراف + مختصات ۳بعدی</td>
+        <td class="right"><span class="tag gnn">GNN مرجع</span></td>
+        <td class="num">41.1</td>
+        <td class="num">34.4</td>
+        <td class="num">82.3</td>
+        <td class="right"><a href="https://doi.org/10.1063/1.5019779">Schütt et al., JCP 2018</a></td>
+      </tr>
+      <tr>
+        <td class="right">DimeNet++ (۲۰۲۰)</td>
+        <td class="right">گراف + زوایای سه‌بعدی</td>
+        <td class="right"><span class="tag gnn">GNN مرجع</span></td>
+        <td class="num">24.6</td>
+        <td class="num">19.5</td>
+        <td class="num">32.0</td>
+        <td class="right"><a href="https://github.com/gasteigerjo/dimenet">ریپوی رسمی DimeNet</a></td>
+      </tr>
+      <tr>
+        <td class="right">PaiNN (۲۰۲۱)</td>
+        <td class="right">گراف + مختصات ۳بعدی</td>
+        <td class="right"><span class="tag gnn">GNN مرجع</span></td>
+        <td class="num">27.6</td>
+        <td class="num">21.3</td>
+        <td class="num">45.6</td>
+        <td class="right"><a href="https://doi.org/10.1038/s41467-021-21275-3">Schütt et al., Nat. Comm. 2021</a></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="note">
+    واحد همه‌ی اعداد meV است (eV × ۱۰۰۰). عدد Pereira برای Gap منتشر نشده (—).
+    دقت کنید مدل‌های GNN «بیش‌ورودی» دارند: مختصات سه‌بعدی اتم‌ها و توپولوژی کامل پیوندها؛
+    مدل ما فعلاً فقط ۱۸ عدد سراسری مولکول را می‌بیند.
+  </p>
+</div>
+
+<h2>۳) مقایسه نسبی — سیستم من نسبت به اعداد آن‌ها</h2>
+<div class="card">
+  <p>
+    مبنای همه‌ی نسبیت‌ها، <b>بهترین ران ثبت‌شده‌ی سیستم شما</b> است (Adam + cosine، epoch 58:
+    HOMO 253.4 / LUMO 321.3 / Gap 398.7 meV). عدد هر خانه = <b>خطای شما ÷ خطای مرجع</b>؛
+    بنابراین <b>×۱ یعنی هم‌سطح شدن</b> و هرچه بزرگ‌تر یعنی مرجع آن‌قدر بهتر است.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th class="right">نسبت خطای شما به مرجع</th>
+        <th>HOMO</th>
+        <th>LUMO</th>
+        <th>Gap</th>
+        <th class="right">خواندن عدد</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="right">RF + fingerprint (Pereira ۲۰۱۷) — هم‌کلاس</td>
+        <td class="num">×1.69</td>
+        <td class="num">×2.01</td>
+        <td class="num">—</td>
+        <td class="right">خطای شما ≈ ۲ برابر هم‌کلاسِ غنی‌تر</td>
+      </tr>
+      <tr>
+        <td class="right">SchNet (۲۰۱۷)</td>
+        <td class="num">×6.16</td>
+        <td class="num">×9.34</td>
+        <td class="num">×4.84</td>
+        <td class="right">ضعیف‌ترین GNN خانواده</td>
+      </tr>
+      <tr>
+        <td class="right">PaiNN (۲۰۲۱)</td>
+        <td class="num">×9.18</td>
+        <td class="num">×15.08</td>
+        <td class="num">×8.74</td>
+        <td class="right">—</td>
+      </tr>
+      <tr>
+        <td class="right">DimeNet++ (۲۰۲۰)</td>
+        <td class="num">×10.30</td>
+        <td class="num">×16.48</td>
+        <td class="num">×12.46</td>
+        <td class="right">قوی‌ترین مرجع جدول</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>چه فاصله‌ای تا عدد هر مرجع باقی است؟ (درصد کاهش خطای لازم)</h3>
+  <p>
+    برای اینکه عدد شما به عدد مرجع برسد، خطای فعلی باید این‌قدر کم شود:
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th class="right">هدف</th>
+        <th>HOMO</th>
+        <th>LUMO</th>
+        <th>Gap</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="right">رسیدن به سطح Pereira (هم‌کلاس)</td>
+        <td class="num">−40.8%</td>
+        <td class="num">−50.2%</td>
+        <td class="num">—</td>
+      </tr>
+      <tr>
+        <td class="right">رسیدن به سطح SchNet</td>
+        <td class="num">−83.8%</td>
+        <td class="num">−89.3%</td>
+        <td class="num">−79.4%</td>
+      </tr>
+      <tr>
+        <td class="right">رسیدن به سطح PaiNN</td>
+        <td class="num">−89.1%</td>
+        <td class="num">−93.4%</td>
+        <td class="num">−88.6%</td>
+      </tr>
+      <tr>
+        <td class="right">رسیدن به سطح DimeNet++</td>
+        <td class="num">−90.3%</td>
+        <td class="num">−93.9%</td>
+        <td class="num">−92.0%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>نردبان رسیدن — با کدام تغییر به کدام عدد می‌رسید</h3>
+  <ul>
+    <li><b>پله ۱ (نزدیک‌ترین):</b> featurization غنی‌تر — ECFP fingerprint، شمارش حلقه‌ها، آمار شعاعی.
+    مرجع هم‌کلاس نشان می‌دهد همین تغییر به‌تنهایی هدف ≈۰.۱۵ eV را باز می‌کند (رفع −۴۰٪ تا −۵۰٪ خطای فعلی).</li>
+    <li><b>پله ۲:</b> مصرف GraphTensors موجود در mi-featurization + مدل message-passing کلاس SchNet
+    (گراف + مختصات ۳بعدی که داده هم دارد) → هدف محدوده ۳۰–۸۰ meV.</li>
+    <li><b>پله ۳:</b> زوایای سه‌بعدی (کلاس DimeNet) + batching روی GPU → محدوده ۲۰–۳۰ meV.</li>
+    <li><b>زمینه‌ی منصفانه:</b> ورودی فعلی شما فقط ۱۸ عدد سراسری است؛ GNNها مختصات سه‌بعدی تک‌تک اتم‌ها و
+    توپولوژی کامل را می‌بینند و معمولاً روی GPU آموزش دیده‌اند. پس این نسبت‌ها «فاصله‌ی کلاس ورودی» را هم
+    همراه خودشان دارند — و MAE مستقل از سخت‌افزار است، پس ردیف‌های آبی با هر سخت‌افزاری معتبرند.</li>
+  </ul>
+</div>
+
+<h2>۴) نمودار فاصله — HOMO MAE (meV، هرچه کوتاه‌تر بهتر)</h2>
+<div class="card bar-block">
+  <!-- max reference = 415.3 ; width% = value / 415.3 * 100 -->
+  <div class="bar-row"><div class="bar-label">این پروژه — Adam+cosine</div><div class="bar-track"><div class="bar-fill" style="width:61%; background:var(--ours)"></div></div><div class="bar-value">253.4</div></div>
+  <div class="bar-row"><div class="bar-label">این پروژه — SGD</div><div class="bar-track"><div class="bar-fill" style="width:61.7%; background:#4b9be0"></div></div><div class="bar-value">256.2</div></div>
+  <div class="bar-row"><div class="bar-label">RF + fingerprint (هم‌کلاس)</div><div class="bar-track"><div class="bar-fill" style="width:36.1%; background:var(--ref)"></div></div><div class="bar-value">≈150</div></div>
+  <div class="bar-row"><div class="bar-label">SchNet (GNN)</div><div class="bar-track"><div class="bar-fill" style="width:9.9%; background:var(--ref)"></div></div><div class="bar-value">41.1</div></div>
+  <div class="bar-row"><div class="bar-label">PaiNN (GNN)</div><div class="bar-track"><div class="bar-fill" style="width:6.6%; background:var(--ref)"></div></div><div class="bar-value">27.6</div></div>
+  <div class="bar-row"><div class="bar-label">DimeNet++ (GNN)</div><div class="bar-track"><div class="bar-fill" style="width:5.9%; background:var(--ref)"></div></div><div class="bar-value">24.6</div></div>
+  <p class="note">مقیاس خطی از صفر تا بدترین مقدار (۴۱۵.۳ meV). فاصله‌ی ما از مرجع هم‌کلاس ≈ ×۱.۷ و از GNNهای گراف سه‌بعدی ≈ ×۶ تا ×۱۰ است.</p>
+</div>
+
+<h2>۵) تحلیل صادقانه — فاصله از کجا می‌آید؟</h2>
+<div class="card">
+  <ul>
+    <li><b>ورودی، نه موتور آموزش.</b> مدل ما فقط ۱۸ اسکالر سراسری می‌بیند (مجموع اعداد اتمی، تعداد پیوندها، ...).
+    SchNet/DimeNet/PaiNN ساختار گراف + مختصات سه‌بعدی هر اتم را مصرف می‌کنند. این تفاوت کلاس ورودی است، نه کیفیت پیاده‌سازی.</li>
+    <li><b>نسبت به هم‌کلاس:</b> RF با ECFP fingerprint (Pereira ۲۰۱۷) با نمای غنی‌تر از اتصالات ≈۰.۱۵ eV گرفته است.
+    ما با descriptor نسخه ۱ (فقط جمع‌ها و شمارش‌ها) به ۰.۲۵ eV رسیده‌ایم — فاصله ≈ ×۱.۷ که با featurization غنی‌تر (fingerprint ها، شمارش حلقه‌ها) قابل فشردن است.</li>
+    <li><b>نسبت به GNN:</b> فاصله ≈ ×۶ تا ×۱۰ دقیقاً همان‌جایی است که نقشه‌ی راه پروژه (tensors گراف آماده در mi-featurization → مدل message-passing از کلاس SchNet) نشانه رفته است.</li>
+    <li><b>زمان آموزش</b> با مراجع مستقیماً قابل مقایسه نیست (سخت‌افزار و اندازه مدل متفاوت)؛ اما روی همین CPU، کل pipeline واقعی ۱۳۰k مولکول (بارگذاری→آموزش→ارزیابی) در ~۱۰ دقیقه (SGD) تا ~۳۴ دقیقه (Adam) انجام شد.</li>
+  </ul>
+</div>
+
+<h2>۶) مقایسه‌ی پیل نرم‌افزاری با پایتون</h2>
+<div class="card">
+  <p>نگاشت مؤلفه‌به‌مؤلفه‌ی پیل این پروژه به معادل‌های معمول اکوسیستم پایتون:</p>
+  <table>
+    <thead>
+      <tr>
+        <th class="right">این پروژه (Rust)</th>
+        <th class="right">معادل رایج در پایتون</th>
+        <th class="right">وضعیت</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="right">mi-io (SDF/XYZ/QM9)</td><td class="right">RDKit / Open Babel</td><td class="right">پیاده‌سازی شده، تست round-trip</td></tr>
+      <tr><td class="right">mi-data (dataset + split)</td><td class="right">pandas + numpy</td><td class="right">پیاده‌سازی شده</td></tr>
+      <tr><td class="right">mi-tensor + mi-models + mi-training</td><td class="right">PyTorch (+ PyTorch Geometric برای گراف)</td><td class="right">MLP کامل؛ گرافِ batch شده آینده</td></tr>
+      <tr><td class="right">mi-evaluation (MAE/RMSE/R²)</td><td class="right">scikit-learn.metrics</td><td class="right">پیاده‌سازی شده، f64</td></tr>
+      <tr><td class="right">mi-python</td><td class="right">— (پل interoperability)</td><td class="right">برنامه‌ریزی‌شده</td></tr>
+    </tbody>
+  </table>
+
+  <h3>ردپای وابستگی‌ها</h3>
+  <ul>
+    <li><b>این پروژه:</b> کل stack (۱۵,۷۷۴ خط Rust در ۱۱ crate) روی <b>۱ وابستگی خارجی</b> (burn 0.22.1 — pure-Rust CPU) ساخته شده؛ خروجی یک باینری واحد، بدون interpreter، بدون GIL، با ۳۴۹ تست و خطاهای typed.</li>
+    <li><b>پیل پایتون معادل</b> (RDKit + numpy + pandas + PyTorch + scikit-learn) معمولاً چند گیگابایت نصب، ده‌ها وابستگی ترانزیتیو، و نسخه‌های محیطی (conda/venv) می‌خواهد؛ در عوض اکوسیستم مدل و GPU بالغ‌تری دارد.</li>
+  </ul>
+
+  <h3>چیزهایی که امروز پایتون دارد و ما هنوز نداریم (صادقانه)</h3>
+  <ul>
+    <li>پشتیبانی GPU/CUDA بالغ در PyTorch (ما فعلاً فقط Flex CPU داریم).</li>
+    <li>batching/broadcasting برداری — حلقه‌ی ما فعلاً batch-size ۱ است (نیازمند broadcasting در mi-tensor).</li>
+    <li>کتابخانه‌ی عظیم مدل‌های گراف (PyG/DGL) با implementation آماده‌ی SchNet/DimeNet/PaiNN.</li>
+    <li>Community و ecosystem — ما ۱۱ crate داخلی با تست کامل داریم، اما ecosystem نیستیم.</li>
+  </ul>
+
+  <h3>حلقه‌ی آموزش، کنار هم (یک نمونه واقعی)</h3>
+  <div class="cols2">
+    <pre>python (PyTorch) — نمونه‌ی مرجع
+for x, y, m in loader:
+    pred = model(x)
+    loss = ((pred - y)**2 * m).sum() / m.sum()
+    opt.zero_grad()
+    loss.backward()
+    opt.step()</pre>
+    <pre>rust (mi-training) — همین پروژه
+let lr = schedule.lr(epoch, base_lr)?;
+let history = train(
+    &amp;mut model,
+    &amp;samples,
+    &amp;mut optimizer,   // Sgd / Adam
+    &amp;TrainConfig {
+        epochs: 1,
+        base_lr: lr,
+        schedule: LrSchedule::Constant,
+    },
+    &amp;training_device,
+)?;</pre>
+  </div>
+  <p class="note">
+    تفاوت اصلی در حاشیه نیست، در خط لوله است: در پایتون loader/featurizer/mask معادل را باید از
+    RDKit + pandas + کد دستی سرهم کرد؛ اینجا همه‌ی آن (SDF → استثنا → split → descriptor → mask →
+    metric) داخل همان باینری، typed و seed-pinned است.
+  </p>
+</div>
+
+<h2>۷) جمع‌بندی</h2>
+<div class="card">
+  <p>
+    سیستم این پروژه در <b>اولین baseline خودش</b> (MLP روی ۱۸ descriptor، batch-size ۱، فقط CPU) به
+    <b>0.25 / 0.32 / 0.40 eV</b> رسیده است. نسبت به مرجع هم‌کلاسِ منتشرشده (RF + fingerprint، ≈۰.۱۵ eV)
+    فاصله ≈ ×۱.۷ است که با غنی‌کردن featurization قابل فشردن است؛ نسبت به GNNهای سه‌بعدی (۲۰–۴۵ meV)
+    فاصله ≈ ×۶ تا ×۱۰ است که دقیقاً فازهای بعدی نقشه‌ی راه (tensors گراف → message-passing) برای آن
+    طراحی شده‌اند. در سطح زیرساخت، کل زنجیره با ۱ وابستگی خارجی، یک باینری، ۳۴۹ تست و
+    بازتولیدپذیری seed-pinned اجرا می‌شود — همان چیزی که پیل پایتون معمولاً با چند ابزار جداگانه
+    و نصب چند گیگابایتی به دست می‌دهد.
+  </p>
+</div>
+
+<footer>
+  <b>روش‌شناسی:</b> همه‌ی اعداد ردیف‌های آبی از فایل‌های <code dir="ltr">benchmarks/qm9-baseline/result.json</code>
+  و <code dir="ltr">benchmarks/qm9-adam-cosine/result.json</code> (ران‌های واقعی ۲۰۲۶-۱۱-۱۷ روی CPU محلی، بدون GPU) خوانده شده‌اند.
+  اعداد مراجع عیناً از مقالات/ریپوهای رسمی نقل شده‌اند و سخت‌افزار/دیتاسپلیت آن‌ها با این پروژه یکسان نیست —
+  مقایسه‌ی دقت (MAE) معتبر است؛ مقایسه‌ی زمان آموزش صرفاً کیفی است.
+  منابع: <a href="https://doi.org/10.1063/1.5019779">SchNet, JCP 2018</a> ·
+  <a href="https://github.com/gasteigerjo/dimenet">DimeNet/DimeNet++ (official repo)</a> ·
+  <a href="https://doi.org/10.1038/s41467-021-21275-3">PaiNN, Nat. Comm. 2021</a> ·
+  <a href="https://www.academia.edu/33502697/">Pereira et al., JCIM 2017 (RF + ECFP)</a> ·
+  <a href="https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.QM9.html">PyG QM9 dataset docs</a> ·
+  <a href="https://doi.org/10.1038/sdata.2014.22">QM9, Ramakrishnan et al. 2014</a>
+</footer>
+
+</div>
+</body>
+</html>
