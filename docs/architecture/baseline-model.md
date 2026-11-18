@@ -16,7 +16,7 @@ files → dataset → descriptors → training → metrics — runs in native Ru
 with no Python in the loop.
 
 ```text
-MolecularDataset ──► descriptor_vector (18 slots, layout v1) ─┐
+MolecularDataset ──► descriptor_vector (29 slots, layout v2) ─┐
 MolecularEntry   ──► Targets (values[3] + mask[3], eV) ───────┤
                                                               ▼
                                     Mlp (Burn Flex CPU, autodiff)
@@ -37,9 +37,13 @@ MolecularEntry   ──► Targets (values[3] + mask[3], eV) ──────�
 
 Both are thin wrappers over Burn; no numerical code is reimplemented.
 
-### `mi-featurization` — fixed-size descriptor (layout v1)
+### `mi-featurization` — fixed-size descriptor (layout v2; Phase 10 extended the Phase 7 v1 layout)
 `descriptor_vector(molecule, device)` returns a rank-1 tensor of width
-[`DESCRIPTOR_WIDTH`] = 18:
+layout v1 shipped 18 slots; layout v2 ([`DESCRIPTOR_WIDTH`] = 29) extends it with
+molecular weight, heavy-atom/heteroatom counts, per-element composition
+counts `[H, C, N, O, F, other]`, and whole-molecule geometry (radius of
+gyration, diameter) computed from the Cartesian positions. The original
+table covers slots 0–17:
 
 | Slots | Content | Notes |
 | ----- | ------- | ----- |

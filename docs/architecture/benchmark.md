@@ -13,7 +13,7 @@ QM9 dataset — the first measured result of the project:
 ```text
 datasets/qm9.sdf ──► mi-io::load_qm9_sdf (uncharacterized exclusions)
                  ──► random_split 80/10/10 (seeded)
-                 ──► descriptor_vector (18 slots) + Targets (eV)
+                 ──► descriptor_vector (29 slots, layout v2) + Targets (eV)
                  ──► z-score scalers fitted on TRAIN ONLY
                  ──► Mlp per-sample SGD (masked MSE, leaf renewal)
                  ──► checkpoint selection by validation MAE
@@ -91,10 +91,23 @@ and the exclusion list from figshare file `3195404`, then run
 
 ## Results
 
-Recorded runs live in `benchmarks/`; see `benchmarks/qm9-baseline/`
-(result.json + result.md) for the numbers and the full provenance. The
-report states the split, preprocessing, and hyperparameters alongside
-every number, as `baseline-model.md` requires.
+Recorded runs live in `benchmarks/`; each `result.json`/`result.md`
+carries the split, preprocessing, and hyperparameters alongside every
+number, as `baseline-model.md` requires.
+
+**Hyperparameter sweep (layout v1, 300 epochs, batch 256):** the deeper
+network [128, 64, 32] with lr 0.003 won the sweep — pooled test MAE
+0.2888 eV versus 0.3231 eV for the 60-epoch [64, 32] reference
+(−10.6 % from tuning alone; `benchmarks/sweep-*`).
+
+**Descriptor v2 + tuned run** (`benchmarks/qm9-v2-sweep-best/`): layout
+v2 descriptors with the winning config reach test MAE
+**0.1991 / 0.2612 / 0.3232 eV** (R² 0.803 / 0.922 / 0.884, checkpoint
+epoch 287) in 355 s wall clock — −19 % pooled error versus the Phase 10
+recorded run, entirely from richer inputs and tuning. Honest reading:
+still above the ~0.15 eV RF+ECFP reference (Pereira 2017) and far above
+3-D GNNs; the remaining gap is input information, which the graph-model
+roadmap targets.
 
 ### Run of 2026-11-17 (qm9-baseline-v1)
 

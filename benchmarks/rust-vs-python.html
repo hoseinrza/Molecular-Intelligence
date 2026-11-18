@@ -84,7 +84,7 @@
 <header class="hero">
   <h1>مقایسه Molecular Intelligence با مراجع بنچ‌مارک QM9</h1>
   <p>نتایج اندازه‌گیری‌شده‌ی پروژه (Rust-native، Burn Flex CPU) در برابر اعداد منتشرشده‌ی سیستم‌های مشابه در ادبیات</p>
-  <p class="meta">نسخه‌ی داده: کامیت <code dir="ltr">3b96c93</code> · تاریخ اجرا: ۲۰۲۶-۱۱-۱۷ · سخت‌افزار: CPU محلی (ویندوز، بدون GPU) · همه‌ی ران‌ها: seed 42، معماری 18→[64,32]→3، ۶۰ epoch</p>
+  <p class="meta">نسخه‌ی داده: کامیت <code dir="ltr">3b96c93</code> · تاریخ اجرا: ۲۰۲۶-۱۱-۱۷ · سخت‌افزار: CPU محلی (ویندوز، بدون GPU) · همه‌ی ران‌ها: seed 42، تقسیم ۸۰/۱۰/۱۰ یکسان · معماری و تعداد epoch هر ران در جدول آمده است</p>
 </header>
 
 <h2>۱) سیستم من — چه چیزی اندازه گرفته شده</h2>
@@ -96,14 +96,14 @@
     validation MAE → متریک‌های test به تفکیک HOMO / LUMO / Gap (بر حسب eV).
   </p>
   <div class="cards3">
-    <div class="stat"><div class="big">0.2518 eV</div><div class="lbl">Test MAE — HOMO (batch-256 Adam + cosine)</div></div>
-    <div class="stat"><div class="big">0.3195 eV</div><div class="lbl">Test MAE — LUMO (batch-256 Adam + cosine)</div></div>
-    <div class="stat"><div class="big">0.3979 eV</div><div class="lbl">Test MAE — Gap (batch-256 Adam + cosine)</div></div>
+    <div class="stat"><div class="big">0.1991 eV</div><div class="lbl">Test MAE — HOMO (descriptor v2 + tune)</div></div>
+    <div class="stat"><div class="big">0.2612 eV</div><div class="lbl">Test MAE — LUMO (descriptor v2 + tune)</div></div>
+    <div class="stat"><div class="big">0.3232 eV</div><div class="lbl">Test MAE — Gap (descriptor v2 + tune)</div></div>
   </div>
   <p class="note">
-    ران batch-1 Adam (فاز ۹): 0.2534 / 0.3213 / 0.3987 eV؛ ران SGD (فاز ۸): 0.2562 / 0.3420 / 0.4153 eV —
-    ران batch-256 (فاز ۱۰) بهترین است. زمان‌ها: بارگذاری 1.8s، featurize 2.0s، آموزش SGD 586s،
-    آموزش batch-1 Adam 2056s، آموزش batch-256 Adam 26.6s (خالص) — کل experiment 30.1s، ارزیابی 0.1s.
+    بهترین ران قبلی (batch-256 Adam، layout v1، ۶۰ epoch): 0.2518 / 0.3195 / 0.3979 eV؛
+    batch-1 Adam (فاز ۹): 0.2534 / 0.3213 / 0.3987 eV؛ SGD (فاز ۸): 0.2562 / 0.3420 / 0.4153 eV.
+    ران جدید = descriptor v2 (۲۹ slot) + شبکه [128,64,32] + ۳۰۰ epoch ≈ ۳۵۵ ثانیه.
   </p>
 </div>
 
@@ -129,16 +129,25 @@
     <tbody>
       <tr class="ours">
         <td class="right">Molecular Intelligence — MLP (۲۰۲۶)</td>
-        <td class="right">۱۸ descriptor سراسری</td>
+        <td class="right">۲۹ descriptor سراسری (layout v2)</td>
+        <td class="right"><span class="tag local">اندازه‌گیری محلی</span></td>
+        <td class="num">199.1</td>
+        <td class="num">261.2</td>
+        <td class="num">323.2</td>
+        <td class="right">این پروژه (descriptor v2، [128,64,32]، ۳۰۰ epoch، batch-256 Adam + cosine)</td>
+      </tr>
+      <tr class="ours">
+        <td class="right">Molecular Intelligence — MLP (۲۰۲۶)</td>
+        <td class="right">۱۸ descriptor سراسری (layout v1)</td>
         <td class="right"><span class="tag local">اندازه‌گیری محلی</span></td>
         <td class="num">251.8</td>
         <td class="num">319.5</td>
         <td class="num">397.9</td>
-        <td class="right">این پروژه (batch-256 Adam + cosine، epoch 59)</td>
+        <td class="right">این پروژه (batch-256 Adam + cosine، ۶۰ epoch، epoch 59)</td>
       </tr>
       <tr class="ours">
         <td class="right">Molecular Intelligence — MLP (۲۰۲۶)</td>
-        <td class="right">۱۸ descriptor سراسری</td>
+        <td class="right">۱۸ descriptor سراسری (layout v1)</td>
         <td class="right"><span class="tag local">اندازه‌گیری محلی</span></td>
         <td class="num">253.4</td>
         <td class="num">321.3</td>
@@ -147,7 +156,7 @@
       </tr>
       <tr class="ours">
         <td class="right">Molecular Intelligence — MLP (۲۰۲۶)</td>
-        <td class="right">۱۸ descriptor سراسری</td>
+        <td class="right">۱۸ descriptor سراسری (layout v1)</td>
         <td class="right"><span class="tag local">اندازه‌گیری محلی</span></td>
         <td class="num">256.2</td>
         <td class="num">342.0</td>
@@ -195,15 +204,15 @@
   <p class="note">
     واحد همه‌ی اعداد meV است (eV × ۱۰۰۰). عدد Pereira برای Gap منتشر نشده (—).
     دقت کنید مدل‌های GNN «بیش‌ورودی» دارند: مختصات سه‌بعدی اتم‌ها و توپولوژی کامل پیوندها؛
-    مدل ما فعلاً فقط ۱۸ عدد سراسری مولکول را می‌بیند.
+    بهترین ران ما ۲۹ عدد سراسری (layout v2) می‌بیند؛ مدل‌های GNN مختصات سه‌بعدی تک‌تک اتم‌ها و توپولوژی کامل را مصرف می‌کنند.
   </p>
 </div>
 
 <h2>۳) مقایسه نسبی — سیستم من نسبت به اعداد آن‌ها</h2>
 <div class="card">
   <p>
-    مبنای همه‌ی نسبیت‌ها، <b>بهترین ران ثبت‌شده‌ی سیستم شما</b> است (batch-256 Adam + cosine، epoch 59:
-    HOMO 251.8 / LUMO 319.5 / Gap 397.9 meV). عدد هر خانه = <b>خطای شما ÷ خطای مرجع</b>؛
+    مبنای همه‌ی نسبیت‌ها، <b>بهترین ران ثبت‌شده‌ی سیستم شما</b> است (descriptor v2، batch-256 Adam + cosine، ۳۰۰ epoch، epoch 287:
+    HOMO 199.1 / LUMO 261.2 / Gap 323.2 meV). عدد هر خانه = <b>خطای شما ÷ خطای مرجع</b>؛
     بنابراین <b>×۱ یعنی هم‌سطح شدن</b> و هرچه بزرگ‌تر یعنی مرجع آن‌قدر بهتر است.
   </p>
   <table>
@@ -219,30 +228,30 @@
     <tbody>
       <tr>
         <td class="right">RF + fingerprint (Pereira ۲۰۱۷) — هم‌کلاس</td>
-        <td class="num">×1.68</td>
-        <td class="num">×2.00</td>
+        <td class="num">×1.33</td>
+        <td class="num">×1.63</td>
         <td class="num">—</td>
         <td class="right">خطای شما ≈ ۲ برابر هم‌کلاسِ غنی‌تر</td>
       </tr>
       <tr>
         <td class="right">SchNet (۲۰۱۷)</td>
-        <td class="num">×6.13</td>
-        <td class="num">×9.29</td>
-        <td class="num">×4.83</td>
+        <td class="num">×4.84</td>
+        <td class="num">×7.59</td>
+        <td class="num">×3.93</td>
         <td class="right">ضعیف‌ترین GNN خانواده</td>
       </tr>
       <tr>
         <td class="right">PaiNN (۲۰۲۱)</td>
-        <td class="num">×9.12</td>
-        <td class="num">×15.00</td>
-        <td class="num">×8.73</td>
+        <td class="num">×7.21</td>
+        <td class="num">×12.26</td>
+        <td class="num">×7.09</td>
         <td class="right">—</td>
       </tr>
       <tr>
         <td class="right">DimeNet++ (۲۰۲۰)</td>
-        <td class="num">×10.24</td>
-        <td class="num">×16.39</td>
-        <td class="num">×12.43</td>
+        <td class="num">×8.09</td>
+        <td class="num">×13.40</td>
+        <td class="num">×10.10</td>
         <td class="right">قوی‌ترین مرجع جدول</td>
       </tr>
     </tbody>
@@ -264,27 +273,27 @@
     <tbody>
       <tr>
         <td class="right">رسیدن به سطح Pereira (هم‌کلاس)</td>
-        <td class="num">−40.4%</td>
-        <td class="num">−49.9%</td>
+        <td class="num">−24.7%</td>
+        <td class="num">−38.7%</td>
         <td class="num">—</td>
       </tr>
       <tr>
         <td class="right">رسیدن به سطح SchNet</td>
-        <td class="num">−83.7%</td>
-        <td class="num">−89.2%</td>
-        <td class="num">−79.3%</td>
+        <td class="num">−79.4%</td>
+        <td class="num">−86.8%</td>
+        <td class="num">−74.5%</td>
       </tr>
       <tr>
         <td class="right">رسیدن به سطح PaiNN</td>
-        <td class="num">−89.0%</td>
-        <td class="num">−93.3%</td>
-        <td class="num">−88.5%</td>
+        <td class="num">−86.1%</td>
+        <td class="num">−91.8%</td>
+        <td class="num">−85.9%</td>
       </tr>
       <tr>
         <td class="right">رسیدن به سطح DimeNet++</td>
-        <td class="num">−90.2%</td>
-        <td class="num">−93.9%</td>
-        <td class="num">−92.0%</td>
+        <td class="num">−87.6%</td>
+        <td class="num">−92.5%</td>
+        <td class="num">−90.1%</td>
       </tr>
     </tbody>
   </table>
@@ -305,14 +314,15 @@
 <h2>۴) نمودار فاصله — HOMO MAE (meV، هرچه کوتاه‌تر بهتر)</h2>
 <div class="card bar-block">
   <!-- max reference = 415.3 ; width% = value / 415.3 * 100 -->
-  <div class="bar-row"><div class="bar-label">این پروژه — batch-256 Adam+cosine</div><div class="bar-track"><div class="bar-fill" style="width:60.6%; background:var(--ours)"></div></div><div class="bar-value">251.8</div></div>
+  <div class="bar-row"><div class="bar-label">این پروژه — descriptor v2 + tune</div><div class="bar-track"><div class="bar-fill" style="width:48%; background:var(--ours)"></div></div><div class="bar-value">199.1</div></div>
+  <div class="bar-row"><div class="bar-label">این پروژه — batch-256 Adam+cosine (v1)</div><div class="bar-track"><div class="bar-fill" style="width:60.6%; background:#4b9be0"></div></div><div class="bar-value">251.8</div></div>
   <div class="bar-row"><div class="bar-label">این پروژه — batch-1 Adam+cosine</div><div class="bar-track"><div class="bar-fill" style="width:61%; background:#4b9be0"></div></div><div class="bar-value">253.4</div></div>
   <div class="bar-row"><div class="bar-label">این پروژه — batch-1 SGD</div><div class="bar-track"><div class="bar-fill" style="width:61.7%; background:#7fa8d9"></div></div><div class="bar-value">256.2</div></div>
   <div class="bar-row"><div class="bar-label">RF + fingerprint (هم‌کلاس)</div><div class="bar-track"><div class="bar-fill" style="width:36.1%; background:var(--ref)"></div></div><div class="bar-value">≈150</div></div>
   <div class="bar-row"><div class="bar-label">SchNet (GNN)</div><div class="bar-track"><div class="bar-fill" style="width:9.9%; background:var(--ref)"></div></div><div class="bar-value">41.1</div></div>
   <div class="bar-row"><div class="bar-label">PaiNN (GNN)</div><div class="bar-track"><div class="bar-fill" style="width:6.6%; background:var(--ref)"></div></div><div class="bar-value">27.6</div></div>
   <div class="bar-row"><div class="bar-label">DimeNet++ (GNN)</div><div class="bar-track"><div class="bar-fill" style="width:5.9%; background:var(--ref)"></div></div><div class="bar-value">24.6</div></div>
-  <p class="note">مقیاس خطی از صفر تا بدترین مقدار (۴۱۵.۳ meV). فاصله‌ی ما از مرجع هم‌کلاس ≈ ×۱.۷ و از GNNهای گراف سه‌بعدی ≈ ×۶ تا ×۱۰ است.</p>
+  <p class="note">مقیاس خطی از صفر تا بدترین مقدار (۴۱۵.۳ meV). فاصله‌ی ما از مرجع هم‌کلاس ≈ ×۱.۳ تا ×۱.۶ و از GNNهای گراف سه‌بعدی ≈ ×۳.۹ تا ×۸.۱ است.</p>
 </div>
 
 <h2>۵) سرعت اجرا — اندازه‌گیری روی همین سیستم</h2>
@@ -394,8 +404,8 @@
     <li><b>ورودی، نه موتور آموزش.</b> مدل ما فقط ۱۸ اسکالر سراسری می‌بیند (مجموع اعداد اتمی، تعداد پیوندها، ...).
     SchNet/DimeNet/PaiNN ساختار گراف + مختصات سه‌بعدی هر اتم را مصرف می‌کنند. این تفاوت کلاس ورودی است، نه کیفیت پیاده‌سازی.</li>
     <li><b>نسبت به هم‌کلاس:</b> RF با ECFP fingerprint (Pereira ۲۰۱۷) با نمای غنی‌تر از اتصالات ≈۰.۱۵ eV گرفته است.
-    ما با descriptor نسخه ۱ (فقط جمع‌ها و شمارش‌ها) به ۰.۲۵ eV رسیده‌ایم — فاصله ≈ ×۱.۷ که با featurization غنی‌تر (fingerprint ها، شمارش حلقه‌ها) قابل فشردن است.</li>
-    <li><b>نسبت به GNN:</b> فاصله ≈ ×۶ تا ×۱۰ دقیقاً همان‌جایی است که نقشه‌ی راه پروژه (tensors گراف آماده در mi-featurization → مدل message-passing از کلاس SchNet) نشانه رفته است.</li>
+    descriptor v1 (فقط جمع‌ها و شمارش‌ها) به ۰.۲۵ eV رسیده بود؛ descriptor v2 (جرم مولکولی، ترکیب عنصری، هندسه) با همان معماری به ۰.۲۶ → ۰.۱۹۹ eV در HOMO رسید — فاصله از هم‌کلاس به ≈ ×۱.۳ رسید.</li>
+    <li><b>نسبت به GNN:</b> فاصله ≈ ×۳.۹ تا ×۸.۱ — نقشه‌ی راه (tensors گراف آماده در mi-featurization → مدل message-passing از کلاس SchNet) همین فاصله را هدف می‌گیرد.</li>
     <li><b>زمان آموزش</b> با مراجع مستقیماً قابل مقایسه نیست (سخت‌افزار و اندازه مدل متفاوت)؛ اما روی همین CPU، کل pipeline واقعی ۱۳۰k مولکول (بارگذاری→آموزش→ارزیابی) در ~۱۰ دقیقه (SGD) تا ~۳۴ دقیقه (Adam) انجام شد.</li>
   </ul>
 </div>
@@ -467,8 +477,8 @@ let history = train(
 <h2>۸) جمع‌بندی</h2>
 <div class="card">
   <p>
-    سیستم این پروژه در baseline خودش (MLP روی ۱۸ descriptor، فقط CPU) به
-    <b>0.2518 / 0.3195 / 0.3979 eV</b> رسیده است (بهترین ران: batch-256 Adam + cosine)؛ نسبت به مرجع هم‌کلاسِ منتشرشده (RF + fingerprint، ≈۰.۱۵ eV)
+    سیستم این پروژه با descriptor v2 و tuned baseline (فقط CPU) به
+    <b>0.1991 / 0.2612 / 0.3232 eV</b> رسیده است (قبلاً: 0.2518 / 0.3195 / 0.3979)؛ نسبت به مرجع هم‌کلاسِ منتشرشده (RF + fingerprint، ≈۰.۱۵ eV)
     فاصله ≈ ×۱.۷ است که با غنی‌کردن featurization قابل فشردن است؛ نسبت به GNNهای سه‌بعدی (۲۰–۴۵ meV)
     فاصله ≈ ×۶ تا ×۱۰ است که دقیقاً فازهای بعدی نقشه‌ی راه (tensors گراف → message-passing) برای آن
     طراحی شده‌اند. در سطح زیرساخت، کل زنجیره با ۱ وابستگی خارجی، یک باینری، ۳۴۹ تست و

@@ -27,9 +27,8 @@ recorded full-dataset runs: plain SGD reaches test MAE 0.256 eV (HOMO) /
 ([`benchmarks/qm9-baseline/`](benchmarks/qm9-baseline/result.md)), batch-1
 Adam with cosine annealing improves on it
 ([`benchmarks/qm9-adam-cosine/`](benchmarks/qm9-adam-cosine/result.md)),
-and the Phase 10 batched run (×22 training throughput, 30 s total wall
-clock) sets the current best: 0.2518 / 0.3195 / 0.3979 eV
-([`benchmarks/qm9-batched-adam/`](benchmarks/qm9-batched-adam/result.md)).
+and the tuned descriptor-v2 run sets the current best: 0.1991 / 0.2612 /
+0.3232 eV ([`benchmarks/qm9-v2-sweep-best/`](benchmarks/qm9-v2-sweep-best/result.md)).
 Scientific caveat kept in the docs: QM9 properties are B3LYP DFT values,
 not GW or experimental observables. See
 [`docs/architecture/benchmark.md`](docs/architecture/benchmark.md),
