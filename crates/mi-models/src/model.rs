@@ -391,10 +391,12 @@ mod tests {
             },
         ] {
             let model = Mlp::new_with_seed(config.clone(), &training_device(), 1).unwrap();
+            // The input lives on the model's own device: samples must be
+            // built where the model lives, never mixed.
             let input = Tensor::<2>::from_data(
                 vec![0.5; config.input_dim],
                 TensorShape::new(vec![1, config.input_dim]).unwrap(),
-                &device(),
+                &training_device(),
             )
             .unwrap();
             let output = model.forward(&input).unwrap();

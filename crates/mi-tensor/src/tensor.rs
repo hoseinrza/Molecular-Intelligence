@@ -116,14 +116,15 @@ impl<const D: usize> Tensor<D> {
     ///
     /// # Errors
     ///
-    /// Returns an error when `dims` contains a zero or the element count
-    /// changes.
+    /// Returns [`TensorError::InvalidShape`] when `dims` contains a zero
+    /// and [`TensorError::ShapeMismatch`] (current shape versus requested
+    /// shape) when the element count would change.
     pub fn reshape<const D2: usize>(self, dims: [usize; D2]) -> TensorResult<Tensor<D2>> {
         let target = TensorShape::new(dims.to_vec())?;
         if target.numel() != self.shape.numel() {
-            return Err(TensorError::DataLength {
-                expected: target.numel(),
-                actual: self.shape.numel(),
+            return Err(TensorError::ShapeMismatch {
+                left: self.shape.dims().to_vec(),
+                right: dims.to_vec(),
             });
         }
         Ok(Tensor {

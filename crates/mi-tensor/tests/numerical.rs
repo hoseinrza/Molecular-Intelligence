@@ -333,3 +333,54 @@ fn rank_is_enforced_by_the_type_system_across_ops() {
     // ops::add(&a, &b2);
     let _ = b2;
 }
+
+#[test]
+fn reshape_preserves_values_shape_and_graph() {
+    // Values and shape: [2, 3] -> [3, 2].
+    let x = t2(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], 2, 3);
+    let reshaped = x.clone().reshape([3, 2]).expect("same element count");
+    assert_eq!(reshaped.shape().dims(), &[3, 2]);
+    assert_eq!(
+        reshaped.to_vec().expect("readback"),
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    );
+
+    // The graph stays connected: gradients flow back through the reshape.
+    let leaf = Tensor::<2>::from_data(vec![1.0, 2.0], shape(&[1, 2]), &Cpu::training())
+        .expect("leaf")
+        .require_grad()
+        .expect("training device");
+    let reshaped_leaf = leaf.clone().reshape([2, 1]).expect("compatible");
+    let doubled = ops::mul(
+        &reshaped_leaf,
+        &Tensor::<2>::from_data(vec![2.0, 2.0], shape(&[2, 1]), &Cpu::training())
+            .expect("constant"),
+    )
+    .expect("mul");
+    let gradients = ops::sum_all(&doubled)
+        .expect("sum_all")
+        .backward()
+        .expect("differentiable");
+    assert_eq!(
+        leaf.grad(&gradients)
+            .expect("grad flows through reshape")
+            .to_vec()
+            .expect("readback"),
+        vec![2.0, 2.0]
+    );
+}
+
+#[test]
+fn reshape_rejects_element_count_changes_and_zero_dims() {
+    let x = t2(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], 2, 3);
+    // Element count change is a shape mismatch (source vs requested shape).
+    assert!(matches!(
+        x.clone().reshape([4, 2]),
+        Err(TensorError::ShapeMismatch { left: _, right: _ })
+    ));
+    // Zero dimensions are rejected at ingress validation.
+    assert!(matches!(
+        x.reshape([0, 6]),
+        Err(TensorError::InvalidShape(_))
+    ));
+}
