@@ -16,7 +16,7 @@
 //! steps independent. Fresh leaves are also why no `retain_graph` exists.
 
 use crate::error::{ModelError, ModelResult};
-use mi_tensor::operations::{add, matmul, relu};
+use mi_tensor::operations::{add_bias, matmul, relu};
 use mi_tensor::{Device, Gradients, Tensor, TensorShape};
 
 /// Layer dimensions of an MLP: `[input, hidden…, output]`.
@@ -165,7 +165,7 @@ impl Mlp {
         let mut activation = input.clone();
         for (layer, (weight, bias)) in self.weights.iter().zip(&self.biases).enumerate() {
             let projected = matmul(&activation, weight)?;
-            let biased = add(&projected, bias)?;
+            let biased = add_bias(&projected, bias)?;
             let is_output_layer = layer == self.weights.len() - 1;
             activation = if is_output_layer {
                 biased

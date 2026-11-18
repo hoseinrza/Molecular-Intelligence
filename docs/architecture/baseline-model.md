@@ -139,10 +139,11 @@ state its split, preprocessing, and hyperparameters alongside.
 
 ## Limitations and future work
 
-1. **Batch size 1.** Per-sample SGD is simple and correct but leaves
-   performance on the table; batching needs broadcasting in the tensor
-   layer (planned `mi-tensor` addition) and padded graph batching for
-   message-passing models.
+1. ~~**Batch size 1.**~~ **Descriptor batching addressed in Phase 10**
+   (`mi-training` batched loop, `batch_size` config; ×22 training
+   throughput on the recorded QM9 run). Broadcast row-add exists
+   (`mi-tensor::add_bias`); general broadcasting and padded graph
+   batching for message-passing models remain future work.
 2. ~~**SGD only**~~ — **addressed in Phase 9**: `mi-training` now
    provides SGD with momentum and Adam plus learning-rate schedules
    ([`training.md`](training.md)). Early stopping is still future work;

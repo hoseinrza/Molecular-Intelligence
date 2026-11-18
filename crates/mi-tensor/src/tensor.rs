@@ -29,6 +29,18 @@ impl<const D: usize> Clone for Tensor<D> {
     }
 }
 
+impl<const D: usize> std::fmt::Debug for Tensor<D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Tensor values are device-resident and not printable; the
+        // metadata is what matters in diagnostics.
+        f.debug_struct("Tensor")
+            .field("rank", &D)
+            .field("shape", &self.shape.dims())
+            .field("dtype", &self.dtype())
+            .finish()
+    }
+}
+
 impl<const D: usize> Tensor<D> {
     /// Creates a tensor from row-major f32 data on the given device.
     ///

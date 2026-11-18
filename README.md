@@ -24,9 +24,12 @@ over the leaf-renewal update contract (`Mlp::update_with`), plus
 constant/exponential/cosine learning-rate schedules — driving the
 recorded full-dataset runs: plain SGD reaches test MAE 0.256 eV (HOMO) /
 0.342 eV (LUMO) / 0.415 eV (gap)
-([`benchmarks/qm9-baseline/`](benchmarks/qm9-baseline/result.md)), and
+([`benchmarks/qm9-baseline/`](benchmarks/qm9-baseline/result.md)), batch-1
 Adam with cosine annealing improves on it
-([`benchmarks/qm9-adam-cosine/`](benchmarks/qm9-adam-cosine/result.md)).
+([`benchmarks/qm9-adam-cosine/`](benchmarks/qm9-adam-cosine/result.md)),
+and the Phase 10 batched run (×22 training throughput, 30 s total wall
+clock) sets the current best: 0.2518 / 0.3195 / 0.3979 eV
+([`benchmarks/qm9-batched-adam/`](benchmarks/qm9-batched-adam/result.md)).
 Scientific caveat kept in the docs: QM9 properties are B3LYP DFT values,
 not GW or experimental observables. See
 [`docs/architecture/benchmark.md`](docs/architecture/benchmark.md),
@@ -68,10 +71,10 @@ molecular-intelligence/
 | `mi-graph`       | lib  | Molecular graph representations. **Implemented (Phase 2):** molecular graphs, feature schemas, adjacency, molecule-to-graph conversion. |
 | `mi-data`        | lib  | Dataset loading and data processing. **Implemented (Phase 3 + current phase):** validated in-memory molecular datasets with HOMO/LUMO/gap properties, statistics, and reproducible seed-based random train/validation/test splitting. |
 | `mi-io`          | lib  | Molecular file format I/O. **Implemented:** XYZ parser/writer; SDF (MDL V2000) parser/writer with bonds, formal charges, data fields, and multi-record files; streaming record reader for dataset-scale files; dataset import with property attachment and energy-unit conversion; QM9 loader (uncharacterized exclusion, provenance metadata); scientific provenance metadata; line-numbered typed errors; round-trip-tested formats. |
-| `mi-tensor`      | lib  | Numerical and tensor abstractions. **Implemented:** Burn Flex-backed CPU tensors with ingress validation; graph-preserving arithmetic, matrix, activation, and tensor-reduction operations; differentiable MSE/MAE/Huber losses; `require_grad`/`backward`/`grad` autodiff API; separated host-side evaluation utilities. |
+| `mi-tensor`      | lib  | Numerical and tensor abstractions. **Implemented:** Burn Flex-backed CPU tensors with ingress validation; graph-preserving arithmetic (incl. broadcast `add_bias`, scalar ops, `sqrt`, `cat`), matrix, activation, and tensor-reduction operations; differentiable MSE/MAE/Huber losses; `require_grad`/`backward`/`grad` autodiff API; separated host-side evaluation utilities. |
 | `mi-featurization` | lib | Molecular structure → ML tensors. **Implemented (current phase):** graph tensors from versioned feature schemas, Euclidean distance geometry from Cartesian positions, HOMO/LUMO/gap targets as values/mask tensors in eV; schema-version provenance; explicit-absence conventions. |
 | `mi-models`      | lib  | Machine learning model definitions. **Implemented (current phase):** MLP baseline (deterministic init, per-sample SGD, masked-MSE training) over molecular descriptors on Burn Flex CPU. |
-| `mi-training`    | lib  | Training infrastructure. **Implemented (Phase 9):** canonical masked-MSE loop; SGD with momentum and Adam over the leaf-renewal update contract; constant/exponential/cosine learning-rate schedules. |
+| `mi-training`    | lib  | Training infrastructure. **Implemented (Phase 9–10):** batched canonical masked-MSE loop (`batch_size` config, batch assembly via `cat`); SGD with momentum and Adam with fully on-device state over the leaf-renewal update contract; constant/exponential/cosine learning-rate schedules. |
 | `mi-evaluation`  | lib  | Scientific evaluation and metrics. **Implemented (current phase):** MAE/RMSE/R² for regression with typed degenerate-input errors. |
 | `mi-inference`   | lib  | Model inference. |
 | `mi-python`      | lib  | Future Python interoperability layer. |

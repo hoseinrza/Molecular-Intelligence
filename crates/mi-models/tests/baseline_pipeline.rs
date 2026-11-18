@@ -206,11 +206,11 @@ fn prepare_training(dataset: &MolecularDataset, device: &mi_tensor::Device) -> P
         .iter()
         .enumerate()
         .map(|(index, entry)| {
-            let input = Tensor::<1>::from_data(
+            let input = Tensor::<2>::from_data(
                 (0..DESCRIPTOR_WIDTH)
                     .map(|slot| input_scalers[slot].scale(raw_descriptors[index][slot]))
                     .collect(),
-                TensorShape::new(vec![DESCRIPTOR_WIDTH]).unwrap(),
+                TensorShape::new(vec![1, DESCRIPTOR_WIDTH]).unwrap(),
                 device,
             )
             .unwrap();
@@ -227,16 +227,18 @@ fn prepare_training(dataset: &MolecularDataset, device: &mi_tensor::Device) -> P
                     }
                 })
                 .collect();
-            let values = Tensor::<1>::from_data(
+            let values = Tensor::<2>::from_data(
                 scaled_values,
-                TensorShape::new(vec![Targets::WIDTH]).unwrap(),
+                TensorShape::new(vec![1, Targets::WIDTH]).unwrap(),
                 device,
             )
             .unwrap();
+            let mask = mask.reshape([1, Targets::WIDTH]).unwrap();
             RegressionSample {
                 input,
                 values,
                 mask,
+                mask_sum: mask_slots.iter().sum(),
             }
         })
         .collect();
@@ -279,6 +281,7 @@ fn training_reduces_loss_and_reaches_high_train_r2() {
             epochs,
             base_lr: 0.01,
             schedule: LrSchedule::Constant,
+            batch_size: 1,
         },
         &training_device,
     )
@@ -364,6 +367,7 @@ fn same_seed_produces_the_same_loss_curve() {
         epochs: 40,
         base_lr: 0.01,
         schedule: LrSchedule::Constant,
+        batch_size: 1,
     };
     let first_history = train(
         &mut first,
@@ -414,6 +418,7 @@ fn fully_masked_samples_are_skipped_and_counted() {
             epochs: 5,
             base_lr: 0.01,
             schedule: LrSchedule::Constant,
+            batch_size: 1,
         },
         &training_device,
     )

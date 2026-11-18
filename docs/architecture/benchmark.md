@@ -76,6 +76,13 @@ cargo build -p mi-benchmark --release
     --epochs 60 --hidden 64,32 --lr 0.01 --seed 42
 ```
 
+`--batch-size N` (Phase 10) assembles `[B, width]` batches with `cat`
+and trains one optimizer step per batch; `--validate-every N` throttles
+validation. The recorded batched comparison run lives in
+`benchmarks/qm9-batched-adam/` (Adam lr 0.002, cosine, batch 256,
+checkpoint epoch 59: test MAE 0.2518 / 0.3195 / 0.3979 eV, 30 s total
+wall clock).
+
 The dataset files are not committed (see `.gitignore`); obtain the
 MoleculeNet bundle from
 `https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/molnet_publish/qm9.zip`

@@ -1,0 +1,30 @@
+{
+  "machine": "local Windows CPU (same host as the Rust benchmark)",
+  "shapes": {
+    "rows": 104664,
+    "input": 18,
+    "hidden": [
+      64,
+      32
+    ],
+    "output": 3
+  },
+  "numpy_version": "2.5.4",
+  "batch1_sgd": {
+    "steps_timed": 3000,
+    "per_sample_us": 43.8,
+    "epoch_seconds_extrapolated": 4.6,
+    "throughput_samples_per_s": 22830
+  },
+  "batched_adam": {
+    "batch": 256,
+    "epochs_timed": 3,
+    "epoch_seconds_measured": [
+      0.115,
+      0.112,
+      0.11
+    ],
+    "epoch_seconds_avg": 0.113,
+    "throughput_samples_per_s": 929449
+  }
+}

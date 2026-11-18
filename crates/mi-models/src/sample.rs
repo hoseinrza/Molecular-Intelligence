@@ -1,25 +1,32 @@
 //! Training inputs and model-side prediction.
 //!
 //! [`RegressionSample`] is the one-observation contract between
-//! featurization and training: descriptor input, target values, presence
-//! mask — all rank-1 tensors already built on the caller's device.
-//! [`predict`] is the evaluation-side forward pass.
+//! featurization and training: a descriptor **row**, target values, and
+//! presence mask — all rank-2 `[1, width]` tensors already built on the
+//! caller's device, so the training loop can `cat` them straight into
+//! batches without reshaping. [`predict`] is the evaluation-side forward.
 
 use crate::error::ModelResult;
 use crate::model::Mlp;
 use mi_tensor::Tensor;
 
-/// One training observation: a descriptor input, target values, and the
-/// presence mask, all rank-1 and already built on the model's device.
+/// One training observation: a descriptor row, target values, and the
+/// presence mask, all `[1, width]` tensors already built on the model's
+/// device.
 #[derive(Clone)]
 pub struct RegressionSample {
-    /// The fixed-size molecular descriptor (width = model `input_dim`).
-    pub input: Tensor<1>,
+    /// The fixed-size molecular descriptor row `[1, input_dim]`.
+    pub input: Tensor<2>,
     /// Target values in the fixed `[homo, lumo, gap]` layout (eV); absent
-    /// slots are `0.0`.
-    pub values: Tensor<1>,
+    /// slots are `0.0`. Shape `[1, target_width]`.
+    pub values: Tensor<2>,
     /// Presence mask matching `values`: `1.0` present, `0.0` absent.
-    pub mask: Tensor<1>,
+    /// Shape `[1, target_width]`.
+    pub mask: Tensor<2>,
+    /// Host-side total presence weight (`Σm`) for this sample. Computed
+    /// once at construction so the training loop can skip all-masked
+    /// samples — and count them — without any device round-trip.
+    pub mask_sum: f32,
 }
 
 /// Computes predictions for one sample on the model's own device.

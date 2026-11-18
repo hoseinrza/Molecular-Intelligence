@@ -1,18 +1,21 @@
 //! Optimizers over the leaf-renewal parameter cycle.
 //!
-//! The optimizers here compute updates on the **host** from the gradient
-//! readback — the parameter update itself is an explicitly non-
-//! differentiable step (the model detaches and renews every updated
-//! parameter as a fresh autodiff leaf through [`Mlp::update_with`]), so
-//! no computation graph crosses this boundary. Differentiable work
-//! (forward, loss, backward) stays entirely inside Burn.
+//! Optimizer state (SGD velocity, Adam moments) lives **on the device as
+//! tensors** and every update is composed from graph-preserving `mi-tensor`
+//! operations — `mul_scalar`, `add`, `sub`, `mul`, `div`, `sqrt`,
+//! `add_scalar`. There are no host round-trips in the update path: the
+//! update itself is explicitly non-differentiable (the model detaches and
+//! renews each updated parameter as a fresh autodiff leaf through
+//! [`Mlp::update_with`]), while forward, loss, and backward stay inside
+//! Burn's autodiff. No project-owned autograd engine exists or is planned.
 //!
-//! State (velocity, Adam moments) is keyed by the stable parameter index
-//! the model hands to [`Mlp::update_with`] — weight then bias per layer,
-//! matching [`Mlp::parameter_values`].
+//! State is keyed by the stable parameter index the model hands to
+//! [`Mlp::update_with`] — weight then bias per layer, matching
+//! [`Mlp::parameter_values`].
 
 use crate::error::{TrainingError, TrainingResult};
 use mi_models::Mlp;
+use mi_tensor::operations::{add, add_scalar, div, mul, mul_scalar, sqrt, sub};
 use mi_tensor::{Device, Gradients, Tensor};
 
 /// An update rule applied once per training step.
@@ -22,7 +25,7 @@ pub trait Optimizer {
     ///
     /// # Errors
     ///
-    /// Returns [`TrainingError`] for readback or update failures.
+    /// Returns [`TrainingError`] for tensor or update failures.
     fn step(
         &mut self,
         model: &mut Mlp,
@@ -39,11 +42,12 @@ pub trait Optimizer {
 /// Stochastic gradient descent with classic momentum.
 ///
 /// `v ← momentum·v + ∇p`, then `p ← p − lr·v`. With `momentum = 0` this is
-/// plain per-sample SGD (the Phase 7/8 recipe).
-#[derive(Debug, Clone, PartialEq)]
+/// plain per-sample SGD. Velocity tensors live on the device and the whole
+/// update runs as tensor operations.
+#[derive(Debug, Clone)]
 pub struct Sgd {
     momentum: f32,
-    velocities: Vec<Vec<f32>>,
+    velocities: Vec<Tensor<2>>,
 }
 
 impl Sgd {
@@ -86,31 +90,17 @@ impl Optimizer for Sgd {
                 gradients,
                 |index: usize, parameter: &Tensor<2>, gradient: &Tensor<2>| {
                     if index >= velocities.len() {
-                        velocities.resize(index + 1, Vec::new());
+                        velocities
+                            .resize(index + 1, Tensor::zeros(parameter.shape().clone(), device)?);
                     }
-                    let velocity = &mut velocities[index];
-                    let values = parameter.to_vec()?;
-                    let deltas = gradient.to_vec()?;
-                    if velocity.len() != values.len() {
-                        *velocity = vec![0.0; values.len()];
-                    }
-                    let updated: Vec<f32> = if momentum == 0.0 {
-                        values
-                            .iter()
-                            .zip(&deltas)
-                            .map(|(value, delta)| value - lr * delta)
-                            .collect()
+                    let updated = if momentum == 0.0 {
+                        sub(parameter, &mul_scalar(gradient, lr)?)?
                     } else {
-                        for (velocity, delta) in velocity.iter_mut().zip(&deltas) {
-                            *velocity = momentum * *velocity + delta;
-                        }
-                        values
-                            .iter()
-                            .zip(velocity.iter())
-                            .map(|(value, velocity)| value - lr * velocity)
-                            .collect()
+                        let velocity = &mut velocities[index];
+                        *velocity = add(&mul_scalar(velocity, momentum)?, gradient)?;
+                        sub(parameter, &mul_scalar(velocity, lr)?)?
                     };
-                    Tensor::from_data(updated, parameter.shape().clone(), device)
+                    Ok(updated)
                 },
             )
             .map_err(TrainingError::from)
@@ -122,13 +112,16 @@ impl Optimizer for Sgd {
 }
 
 /// Adam (Kingma & Ba, 2015) with bias-corrected first and second moments.
-#[derive(Debug, Clone, PartialEq)]
+///
+/// The moment tensors live on the device; the only host-side values are
+/// the per-step bias-correction scalars `1/(1 − β^t)`.
+#[derive(Debug, Clone)]
 pub struct Adam {
     beta1: f32,
     beta2: f32,
     epsilon: f32,
-    first_moment: Vec<Vec<f32>>,
-    second_moment: Vec<Vec<f32>>,
+    first_moment: Vec<Tensor<2>>,
+    second_moment: Vec<Tensor<2>>,
     timestep: u64,
 }
 
@@ -212,32 +205,21 @@ impl Optimizer for Adam {
                 gradients,
                 |index: usize, parameter: &Tensor<2>, gradient: &Tensor<2>| {
                     if index >= first.len() {
-                        first.resize(index + 1, Vec::new());
-                        second.resize(index + 1, Vec::new());
+                        first.resize(index + 1, Tensor::zeros(parameter.shape().clone(), device)?);
+                        second.resize(index + 1, Tensor::zeros(parameter.shape().clone(), device)?);
                     }
                     let m = &mut first[index];
                     let v = &mut second[index];
-                    let values = parameter.to_vec()?;
-                    let deltas = gradient.to_vec()?;
-                    if m.len() != values.len() {
-                        *m = vec![0.0; values.len()];
-                        *v = vec![0.0; values.len()];
-                    }
-                    for i in 0..values.len() {
-                        m[i] = beta1 * m[i] + (1.0 - beta1) * deltas[i];
-                        v[i] = beta2 * v[i] + (1.0 - beta2) * deltas[i] * deltas[i];
-                    }
-                    let updated: Vec<f32> = values
-                        .iter()
-                        .zip(m.iter())
-                        .zip(v.iter())
-                        .map(|((value, m), v)| {
-                            let m_hat = m / bias1;
-                            let v_hat = v / bias2;
-                            value - lr * m_hat / (v_hat.sqrt() + epsilon)
-                        })
-                        .collect();
-                    Tensor::from_data(updated, parameter.shape().clone(), device)
+                    *m = add(&mul_scalar(m, beta1)?, &mul_scalar(gradient, 1.0 - beta1)?)?;
+                    *v = add(
+                        &mul_scalar(v, beta2)?,
+                        &mul_scalar(&mul(gradient, gradient)?, 1.0 - beta2)?,
+                    )?;
+                    let m_hat = mul_scalar(m, 1.0 / bias1)?;
+                    let v_hat = mul_scalar(v, 1.0 / bias2)?;
+                    let denominator = add_scalar(&sqrt(&v_hat)?, epsilon)?;
+                    let step = div(&m_hat, &denominator)?;
+                    sub(parameter, &mul_scalar(&step, lr)?)
                 },
             )
             .map_err(TrainingError::from)

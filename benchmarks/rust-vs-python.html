@@ -304,7 +304,80 @@
   <p class="note">مقیاس خطی از صفر تا بدترین مقدار (۴۱۵.۳ meV). فاصله‌ی ما از مرجع هم‌کلاس ≈ ×۱.۷ و از GNNهای گراف سه‌بعدی ≈ ×۶ تا ×۱۰ است.</p>
 </div>
 
-<h2>۵) تحلیل صادقانه — فاصله از کجا می‌آید؟</h2>
+<h2>۵) سرعت اجرا — اندازه‌گیری روی همین سیستم</h2>
+<div class="card">
+  <p>
+    همه‌ی اعداد این بخش اندازه‌گیری محلی است: سمت Rust از ران‌های ثبت‌شده‌ی benchmark؛ سمت پایتون با
+    اسکریپت <code dir="ltr">scripts/numpy_speed_reference.py</code> (numpy 2.5.4) روی همین ماشین و با
+    همان shape ها (۱۰۴,۶۶۴ ردیف، MLP 18→64→32→3، masked MSE). فاز ۱۰ حلقه‌ی آموزش را
+    <b>batched</b> کرد (batch 256، به‌هم‌آمدن ردیف‌ها با <code dir="ltr">cat</code> که برگ‌های گراف اتودیف را
+    حفظ می‌کند) و optimizerها را کاملاً روی device برد.
+  </p>
+
+  <h3>زنجیره‌ی Rust — از فایل تا متریک (ران batched نهایی)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th class="right">مرحله</th>
+        <th>زمان</th>
+        <th class="right">توان عملیاتی</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="right">بارگذاری SDF (۱۳۳,۸۸۵ رکورد، ۲۴۳MB)</td><td class="num">1.8s</td><td class="right">—</td></tr>
+      <tr><td class="right">Featurization ۱۳۰,۸۳۱ مولکول</td><td class="num">2.0s</td><td class="right">—</td></tr>
+      <tr><td class="right">یک epoch آموزش خالص (Adam، batch 256)</td><td class="num">0.44s</td><td class="right">~236k نمونه/ثانیه — ×۲۲ نسبت به batch-1 قبلی</td></tr>
+      <tr><td class="right">یک epoch + validation batched (۱۳k پیش‌بینی)</td><td class="num">0.76s</td><td class="right">—</td></tr>
+      <tr><td class="right">ارزیابی test (۱۳,۰۸۴ پیش‌بینی)</td><td class="num">0.1s</td><td class="right">~130k پیش‌بینی/ثانیه</td></tr>
+      <tr><td class="right">کل experiment ۶۰ epoch (همه‌چیز)</td><td class="num">30.1s</td><td class="right">SGD ران مرجع قبلی: 590s</td></tr>
+      <tr><td class="right">cold start باینری</td><td class="num">5.7ms</td><td class="right">در برابر 106ms ایمپورت python+numpy</td></tr>
+    </tbody>
+  </table>
+
+  <h3>همین ماشین، همین shapes — Rust در برابر پایتون (numpy)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th class="right">سناریو (۶۰ epoch معادل)</th>
+        <th>Rust (Burn)</th>
+        <th>Python (numpy)</th>
+        <th class="right">برنده</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="right">train خالص، batch-1 SGD (همان الگوریتم)</td><td class="num">9.8s/epoch</td><td class="num">4.6s/epoch</td><td class="right">numpy ×۲.۱</td></tr>
+      <tr><td class="right">train خالص، Adam دسته‌ای batch-256</td><td class="num">0.44s/epoch</td><td class="num">0.113s/epoch</td><td class="right">numpy ×۳.۹</td></tr>
+      <tr><td class="right">کل experiment واقعی (load+featurize+train+val+eval)</td><td class="num">30.1s</td><td class="num">غیرقابل اجرا بدون RDKit</td><td class="right">Rust (تنها بازیکن)</td></tr>
+      <tr><td class="right">cold start</td><td class="num">5.7ms</td><td class="num">106ms</td><td class="right">Rust ×۱۹</td></tr>
+    </tbody>
+  </table>
+
+  <h3>خوانش صادقانه</h3>
+  <ul>
+    <li><b>batching جهش ×۲۲ داد</b> (236k در برابر 10.7k نمونه/ثانیه) و دقت را هم بهتر کرد
+    (batched Adam همه‌ی اسلات‌ها و R²ها را جلو زد) — دقیقاً همان پله‌ای که numpy با آن می‌برد.</li>
+    <li><b>در train خالص، numpy هنوز ×۳.۹ سریع‌تر است</b> (0.113s در برابر 0.44s هر epoch):
+    حلقه‌ی numpy عملیات خام آرایه‌ای بدون dispatch است؛ حلقه‌ی ما از لایه‌ی dispatch فریم‌ورک
+    Burn می‌گذرد و بهای autodiff/validated-shape را می‌دهد. بستن این فاصله نیازمند op-fusion یا
+    کاهش سربار dispatch است، نه تغییر زبان.</li>
+    <li><b>end-to-end روی داده‌ی واقعی، Rust تنها گزینه‌ی اجراست:</b> کل experiment (پارس ۲۴۳MB SDF،
+    استثناسازی، split، استانداردسازی، آموزش، checkpoint، متریک) در ۳۰ ثانیه و در یک باینری؛
+    سمت پایتون همین زنجیره بدون RDKit/PyTorch اصلاً قابل اجرا نیست و با آن‌ها نصب چند گیگابایتی لازم است.</li>
+    <li><b>cold start ×۱۹</b> برای CLI/CI/فراخوانی‌های ریز.</li>
+  </ul>
+
+  <h3>زمان آموزش منتشرشده‌ی مراجع (سخت‌افزار متفاوت — فقط برای مقیاس)</h3>
+  <ul>
+    <li><b>DimeNet++ کامل:</b> طبق مقاله‌ی
+    <a href="https://dl.acm.org/doi/10.1145/3605573.3605577">FastDimeNet++ (Zhu et al., ICPP 2023)</a>
+    آموزش کامل بیش از <b>یک ماه روی یک GPU واحد A100</b> طول می‌کشد؛ با ۵۱۲ GPU به ۲۱.۹ دقیقه می‌رسد.</li>
+    <li>در برابر، experiment کامل ما روی <b>CPU</b> در ۳۰ ثانیه تمام می‌شود —
+    البته برای کلاس مدل بسیار سبک‌تر (MLP descriptor در برابر message-passing سه‌بعدی)؛ مقایسه‌ی مستقیم
+    بین این دو کلاس منصفانه نیست و فقط مقیاس هزینه را نشان می‌دهد.</li>
+  </ul>
+</div>
+
+<h2>۶) تحلیل صادقانه — فاصله از کجا می‌آید؟</h2>
 <div class="card">
   <ul>
     <li><b>ورودی، نه موتور آموزش.</b> مدل ما فقط ۱۸ اسکالر سراسری می‌بیند (مجموع اعداد اتمی، تعداد پیوندها، ...).
@@ -316,7 +389,7 @@
   </ul>
 </div>
 
-<h2>۶) مقایسه‌ی پیل نرم‌افزاری با پایتون</h2>
+<h2>۷) مقایسه‌ی پیل نرم‌افزاری با پایتون</h2>
 <div class="card">
   <p>نگاشت مؤلفه‌به‌مؤلفه‌ی پیل این پروژه به معادل‌های معمول اکوسیستم پایتون:</p>
   <table>
@@ -380,7 +453,7 @@ let history = train(
   </p>
 </div>
 
-<h2>۷) جمع‌بندی</h2>
+<h2>۸) جمع‌بندی</h2>
 <div class="card">
   <p>
     سیستم این پروژه در <b>اولین baseline خودش</b> (MLP روی ۱۸ descriptor، batch-size ۱، فقط CPU) به
@@ -402,8 +475,10 @@ let history = train(
   <a href="https://github.com/gasteigerjo/dimenet">DimeNet/DimeNet++ (official repo)</a> ·
   <a href="https://doi.org/10.1038/s41467-021-21275-3">PaiNN, Nat. Comm. 2021</a> ·
   <a href="https://www.academia.edu/33502697/">Pereira et al., JCIM 2017 (RF + ECFP)</a> ·
+  <a href="https://dl.acm.org/doi/10.1145/3605573.3605577">FastDimeNet++, ICPP 2023 (زمان آموزش DimeNet++)</a> ·
   <a href="https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.QM9.html">PyG QM9 dataset docs</a> ·
-  <a href="https://doi.org/10.1038/sdata.2014.22">QM9, Ramakrishnan et al. 2014</a>
+  <a href="https://doi.org/10.1038/sdata.2014.22">QM9, Ramakrishnan et al. 2014</a> ·
+  سرعت پایتون: <code dir="ltr">benchmarks/numpy-speed/result.json</code>
 </footer>
 
 </div>

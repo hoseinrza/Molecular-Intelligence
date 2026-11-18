@@ -51,6 +51,12 @@ RegressionSample (values + mask) ──► train(model, samples, optimizer, conf
   and the first-step `lr·sign(g)` property (Adam), plus a convergence
   comparison showing Adam beats plain SGD at equal learning rate.
 
+Both optimizers keep their state **on the device as tensors** and compose
+the whole update from graph-preserving `mi-tensor` operations —
+`mul_scalar`, `add`, `sub`, `mul`, `div`, `sqrt`, `add_scalar`. No host
+round-trip happens anywhere in the step; the only host-side values are
+Adam's per-step bias-correction scalars.
+
 ## Implemented schedules
 
 - **`Constant`** — the base rate every epoch.
@@ -64,13 +70,25 @@ typed `TrainingError::InvalidConfig`.
 ## The canonical loop
 
 `train(model, samples, optimizer, config, device)` runs `config.epochs`
-passes over the samples in order. Per epoch it derives the learning rate
-from the schedule; per sample it composes the masked MSE
+passes over batches assembled from the per-sample rows with
+`mi_tensor::operations::cat` — stacking rows keeps every sample's leaf
+connected to the autodiff graph, which plain data ingress would sever.
+Per epoch it derives the learning rate from the schedule; per batch it
+composes the masked MSE
 `Σ(p−y)²·m / Σm` from graph-preserving tensor ops, skips (and counts)
-samples whose presence mask is all zero, runs `backward`, and applies
-the optimizer. It returns one `EpochMetrics` per epoch (mean loss,
-skip counts). Batch size remains **1** — batching is a documented
-`mi-tensor` future step, not an optimizer concern.
+batches whose samples are all masked via the host-side
+`mask_sum`, runs `backward`, and applies the optimizer. It returns one `EpochMetrics` per epoch (mean loss,
+skip counts). `batch_size = 1` reproduces the historical per-sample loop
+exactly; batch 256 is the recorded production setting.
+
+**Phase 10 — batching and on-device optimizers.** Batch assembly with
+`cat`, the `add_bias` broadcast row-add in the MLP forward, and
+on-device optimizer state removed every host round-trip from the hot
+path and delivered a ×22 training-throughput jump (10.7k → 236k
+samples/s); the recorded batched QM9 run also improved every test
+metric. Raw-array NumPy remains ~×3.9 faster per pure-training epoch
+(measured on the same machine — eager dispatch overhead); the full
+pipeline remains Rust-only.
 
 **API movement, documented:** `train_sgd`, `EpochMetrics`, and
 `RegressionSample`/`predict` previously lived in `mi-models::training`.

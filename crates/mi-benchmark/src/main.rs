@@ -44,6 +44,7 @@ struct Args {
     seed: u64,
     subset: Option<usize>,
     validate_every: usize,
+    batch_size: usize,
     optimizer: OptimizerChoice,
     schedule: ScheduleChoice,
 }
@@ -79,6 +80,7 @@ impl Args {
         let mut seed = 42u64;
         let mut subset = None;
         let mut validate_every = 1usize;
+        let mut batch_size = 1usize;
         let mut optimizer = OptimizerChoice::Sgd { momentum: 0.0 };
         let mut schedule = ScheduleChoice::Constant;
         let mut momentum = 0.0f32;
@@ -130,6 +132,14 @@ impl Args {
                     validate_every = value(&mut position)?
                         .parse()
                         .map_err(|error| format!("--validate-every: {error}"))?
+                }
+                "--batch-size" => {
+                    batch_size = value(&mut position)?
+                        .parse()
+                        .map_err(|error| format!("--batch-size: {error}"))?;
+                    if batch_size == 0 {
+                        return Err("--batch-size must be positive".into());
+                    }
                 }
                 "--optimizer" => {
                     optimizer = match value(&mut position)?.as_str() {
@@ -186,6 +196,7 @@ impl Args {
             seed,
             subset,
             validate_every,
+            batch_size,
             optimizer,
             schedule,
         })
@@ -198,7 +209,7 @@ fn main() {
         Ok(args) => args,
         Err(error) => {
             eprintln!(
-                "error: {error}\n\nusage: qm9-baseline [--dataset PATH] [--uncharacterized PATH] [--out DIR] [--epochs N] [--lr F] [--hidden W,W,...] [--seed N] [--subset N] [--validate-every N] [--optimizer sgd|adam] [--momentum F] [--schedule constant|exponential|cosine] [--decay F]"
+                "error: {error}\n\nusage: qm9-baseline [--dataset PATH] [--uncharacterized PATH] [--out DIR] [--epochs N] [--lr F] [--hidden W,W,...] [--seed N] [--subset N] [--validate-every N] [--batch-size N] [--optimizer sgd|adam] [--momentum F] [--schedule constant|exponential|cosine] [--decay F]"
             );
             std::process::exit(2);
         }
@@ -296,10 +307,12 @@ fn run(args: Args) -> Result<(), String> {
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| format!("target scalers: {error}"))?;
 
-    // Training samples on the training device: standardized inputs and
-    // standardized values with the raw presence mask.
-    let mask_shape =
-        TensorShape::new(vec![Targets::WIDTH]).map_err(|error| format!("target shape: {error}"))?;
+    // Training samples on the training device: standardized input rows and
+    // standardized values with the raw presence mask, all `[1, width]`.
+    let input_shape = TensorShape::new(vec![1, DESCRIPTOR_WIDTH])
+        .map_err(|error| format!("input shape: {error}"))?;
+    let row_shape = TensorShape::new(vec![1, Targets::WIDTH])
+        .map_err(|error| format!("target shape: {error}"))?;
     let samples: Vec<RegressionSample> = train_entries
         .iter()
         .zip(&train_descriptors)
@@ -307,13 +320,8 @@ fn run(args: Args) -> Result<(), String> {
             let scaled = input_scalers
                 .scale_row(descriptor)
                 .map_err(|error| format!("input scalers: {error}"))?;
-            let input = Tensor::<1>::from_data(
-                scaled,
-                TensorShape::new(vec![DESCRIPTOR_WIDTH])
-                    .map_err(|error| format!("input shape: {error}"))?,
-                &training_device,
-            )
-            .map_err(|error| format!("training input: {error}"))?;
+            let input = Tensor::<2>::from_data(scaled, input_shape.clone(), &training_device)
+                .map_err(|error| format!("training input: {error}"))?;
             let targets = Targets::extract(entry);
             let mut values = Vec::with_capacity(Targets::WIDTH);
             let mut mask = Vec::with_capacity(Targets::WIDTH);
@@ -329,14 +337,16 @@ fn run(args: Args) -> Result<(), String> {
                     }
                 }
             }
-            let values = Tensor::<1>::from_data(values, mask_shape.clone(), &training_device)
+            let mask_sum: f32 = mask.iter().sum();
+            let values = Tensor::<2>::from_data(values, row_shape.clone(), &training_device)
                 .map_err(|error| format!("target tensor: {error}"))?;
-            let mask = Tensor::<1>::from_data(mask, mask_shape.clone(), &training_device)
+            let mask = Tensor::<2>::from_data(mask, row_shape.clone(), &training_device)
                 .map_err(|error| format!("mask tensor: {error}"))?;
             Ok(RegressionSample {
                 input,
                 values,
                 mask,
+                mask_sum,
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
@@ -391,6 +401,7 @@ fn run(args: Args) -> Result<(), String> {
                 epochs: 1,
                 base_lr: lr,
                 schedule: LrSchedule::Constant,
+                batch_size: args.batch_size,
             },
             &training_device,
         )
@@ -398,7 +409,13 @@ fn run(args: Args) -> Result<(), String> {
         let train_mean_loss = history[0].mean_loss;
         let validate = epoch % args.validate_every == 0 || epoch + 1 == args.epochs;
         let validation_mae_ev = if validate {
-            validation_mae_ev(&model, &validation_entries, &input_scalers, &target_scalers)?
+            validation_mae_ev(
+                &model,
+                &validation_entries,
+                &input_scalers,
+                &target_scalers,
+                args.batch_size,
+            )?
         } else {
             f64::NAN
         };
@@ -586,29 +603,38 @@ fn validation_mae_ev(
     entries: &[EvaluationEntry],
     input_scalers: &ColumnScalers,
     target_scalers: &[StandardScaler],
+    batch_size: usize,
 ) -> Result<f64, String> {
     let device = Cpu::inference();
     let mut predictions = Vec::new();
     let mut references = Vec::new();
-    for entry in entries {
-        let scaled = input_scalers
-            .scale_row(&entry.descriptor)
-            .map_err(|error| format!("validation scalers: {error}"))?;
-        let input = Tensor::<1>::from_data(
-            scaled,
-            TensorShape::new(vec![DESCRIPTOR_WIDTH])
+    for chunk in entries.chunks(batch_size.max(1)) {
+        let mut rows = Vec::with_capacity(chunk.len() * DESCRIPTOR_WIDTH);
+        for entry in chunk {
+            rows.extend(
+                input_scalers
+                    .scale_row(&entry.descriptor)
+                    .map_err(|error| format!("validation scalers: {error}"))?,
+            );
+        }
+        let input = Tensor::<2>::from_data(
+            rows,
+            TensorShape::new(vec![chunk.len(), DESCRIPTOR_WIDTH])
                 .map_err(|error| format!("validation input shape: {error}"))?,
             &device,
         )
         .map_err(|error| format!("validation input: {error}"))?;
-        let output = predict(model, &input)
+        let outputs = model
+            .forward(&input)
             .map_err(|error| format!("validation predict: {error}"))?
             .to_vec()
             .map_err(|error| format!("validation readback: {error}"))?;
-        for slot in 0..Targets::WIDTH {
-            if let Some(reference) = entry.references[slot] {
-                predictions.push(target_scalers[slot].unscale(output[slot]));
-                references.push(reference);
+        for (row, entry) in outputs.chunks(Targets::WIDTH).zip(chunk) {
+            for slot in 0..Targets::WIDTH {
+                if let Some(reference) = entry.references[slot] {
+                    predictions.push(target_scalers[slot].unscale(row[slot]));
+                    references.push(reference);
+                }
             }
         }
     }
